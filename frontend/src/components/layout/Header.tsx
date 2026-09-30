@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
     { id: 'scanner', label: 'Scanner', icon: Zap },
-    { id: 'map', label: 'Global Map', icon: MapPin },
+    { id: 'map', label: 'Map', icon: MapPin },
     { id: 'records', label: 'Records', icon: Layers },
     { id: 'resolvers', label: 'Resolvers', icon: Server },
     { id: 'findings', label: 'Security', icon: ShieldAlert },
@@ -49,9 +49,9 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-[9999] bg-white dark:bg-[#090d16] border-b border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
+    <header className="sticky top-0 z-[9999] bg-white/95 dark:bg-[#090d16]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-3">
+        <div className="flex items-center justify-between h-16 gap-4">
           {/* Brand Logo & Title */}
           <div
             className="flex items-center space-x-2.5 cursor-pointer select-none flex-shrink-0"
@@ -68,8 +68,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Streamlined Desktop Navigation Bar */}
-          <nav className="hidden xl:flex items-center gap-0.5 bg-slate-100/90 dark:bg-slate-950/70 p-1 rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-xs">
+          {/* Clean Borderless Enterprise Navigation */}
+          <nav className="hidden xl:flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -77,14 +77,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`nav-item-btn flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs whitespace-nowrap select-none transition-all ${
+                  className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs whitespace-nowrap select-none transition-colors ${
                     isActive
-                      ? 'nav-item-active bg-white text-sky-900 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 font-bold shadow-xs'
-                      : 'border border-transparent text-slate-700 hover:text-slate-950 hover:bg-white/80 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900/60 font-medium'
+                      ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400 font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50 font-medium'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-sky-700 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400'}`} />
-                  <span className={`leading-none ${isActive ? 'text-sky-900 dark:text-sky-300 font-bold' : 'text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}>
+                  <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <span className="leading-none">
                     {item.label}
                   </span>
                 </button>
@@ -97,10 +97,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Real DNS / Demo Mode Toggle Switch */}
             <button
               onClick={() => setIsDemoMode(!isDemoMode)}
-              className={`h-8 px-3 rounded-lg text-xs font-bold border inline-flex items-center gap-1.5 whitespace-nowrap transition-all shadow-xs flex-shrink-0 ${
+              className={`h-8 px-3 rounded-full text-xs font-semibold border inline-flex items-center gap-1.5 whitespace-nowrap transition-colors flex-shrink-0 ${
                 isDemoMode
-                  ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200/70 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40 dark:hover:bg-amber-500/25'
-                  : 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200/70 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40 dark:hover:bg-emerald-500/25'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800/40 dark:hover:bg-amber-900/40'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/40 dark:hover:bg-emerald-900/40'
               }`}
               title="Click to toggle between Real DNS queries and offline Hackathon Demo Fixtures"
             >
@@ -112,11 +112,11 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </button>
 
-            {/* Light / Dark Mode Toggle */}
+            {/* Light / Dark Mode Toggle (Ghost Button) */}
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="w-8 h-8 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300 transition-all shadow-xs inline-flex items-center justify-center flex-shrink-0"
+                className="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/60 transition-colors inline-flex items-center justify-center flex-shrink-0"
                 title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 aria-label="Toggle theme"
               >
@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Medium/Mobile Navigation Scroller */}
-        <div className="xl:hidden flex items-center overflow-x-auto py-2 space-x-1.5 border-t border-slate-200 dark:border-slate-800/60 no-scrollbar">
+        <div className="xl:hidden flex items-center overflow-x-auto py-2 space-x-1 border-t border-slate-200/80 dark:border-slate-800/80 no-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -139,14 +139,14 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`nav-item-btn flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs whitespace-nowrap transition-colors ${
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'nav-item-active bg-white text-sky-900 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 font-bold shadow-xs'
-                    : 'border border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/40 font-medium'
+                    ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400 font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50 font-medium'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-sky-700 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400'}`} />
-                <span className={`leading-none ${isActive ? 'text-sky-900 dark:text-sky-300 font-bold' : 'text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}>
+                <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                <span className="leading-none">
                   {item.label}
                 </span>
               </button>
