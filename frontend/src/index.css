@@ -7,6 +7,16 @@
     @apply bg-[#090d16] text-slate-100 font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+
+  ::selection {
+    background-color: #0284c7 !important; /* Rich sky-600 */
+    color: #ffffff !important;           /* Pure white text */
+  }
+
+  ::-moz-selection {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+  }
 }
 
 /* Custom scrollbars */
