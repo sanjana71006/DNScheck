@@ -20,33 +20,63 @@ interface OverallStatusCardProps {
 
 export const OverallStatusCard: React.FC<OverallStatusCardProps> = ({ scan }) => {
   const getStatusBadge = () => {
-    switch (scan.overallStatus) {
-      case 'HEALTHY':
-        return {
-          label: 'CONVERGED & HEALTHY',
-          bg: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-300',
-          icon: CheckCircle
-        };
-      case 'PROPAGATING':
-        return {
-          label: 'PROPAGATION IN PROGRESS',
-          bg: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/40 dark:text-amber-300',
-          icon: RefreshCw
-        };
-      case 'WARNING':
-        return {
-          label: 'MISCONFIGURATIONS DETECTED',
-          bg: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/40 dark:text-amber-300',
-          icon: AlertTriangle
-        };
-      case 'ERROR':
-      default:
-        return {
-          label: 'ATTENTION REQUIRED / ADVISORIES',
-          bg: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/40 dark:text-amber-300',
-          icon: AlertTriangle
-        };
+    const isFullyConverged = scan.propagationPercentage >= 99;
+    const hasCritical = scan.findings?.some((f) => f.severity === 'CRITICAL');
+    const hasDnsMisconfig = scan.findings?.some(
+      (f) =>
+        f.severity === 'WARNING' &&
+        (f.category === 'SYNTAX' ||
+          f.category === 'AUTHORITATIVE' ||
+          f.category === 'PROPAGATION' ||
+          f.category === 'AVAILABILITY' ||
+          f.category === 'SECURITY_THREAT')
+    );
+    const emailAdvisories =
+      scan.findings?.filter(
+        (f) =>
+          f.category === 'SECURITY_DMARC' ||
+          f.category === 'SECURITY_SPF' ||
+          f.category === 'SECURITY_MX' ||
+          f.category === 'PERFORMANCE'
+      ) || [];
+
+    if (hasCritical || scan.overallStatus === 'ERROR') {
+      return {
+        label: 'CRITICAL ISSUES DETECTED',
+        bg: 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-500/15 dark:border-rose-500/40 dark:text-rose-300',
+        icon: XCircle
+      };
     }
+
+    if (scan.propagationPercentage < 90 || scan.overallStatus === 'PROPAGATING') {
+      return {
+        label: 'PROPAGATION IN PROGRESS',
+        bg: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/40 dark:text-amber-300',
+        icon: RefreshCw
+      };
+    }
+
+    if (hasDnsMisconfig) {
+      return {
+        label: 'DNS MISCONFIGURATIONS DETECTED',
+        bg: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/40 dark:text-amber-300',
+        icon: AlertTriangle
+      };
+    }
+
+    if (isFullyConverged && emailAdvisories.length > 0) {
+      return {
+        label: 'CONVERGED & HEALTHY (ADVISORIES DETECTED)',
+        bg: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-300',
+        icon: CheckCircle
+      };
+    }
+
+    return {
+      label: 'CONVERGED & HEALTHY',
+      bg: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-300',
+      icon: CheckCircle
+    };
   };
 
   const status = getStatusBadge();

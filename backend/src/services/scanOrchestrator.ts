@@ -302,9 +302,19 @@ export class ScanOrchestrator {
       }
     }
 
-    // Determine Overall Status
+    // Determine Overall Status:
+    // Core DNS infrastructure issues (authoritative inconsistency, propagation incompleteness, syntax errors, unreachable NS, threat alerts) determine WARNING/ERROR.
+    // Pure email hygiene advisories (like missing DMARC on a website) do not make a fully converged DNS zone marked as misconfigured.
     const hasCritical = allFindings.some((f) => f.severity === 'CRITICAL');
-    const hasWarning = allFindings.some((f) => f.severity === 'WARNING');
+    const hasDnsInfrastructureWarning = allFindings.some(
+      (f) =>
+        f.severity === 'WARNING' &&
+        (f.category === 'SYNTAX' ||
+          f.category === 'AUTHORITATIVE' ||
+          f.category === 'PROPAGATION' ||
+          f.category === 'AVAILABILITY' ||
+          f.category === 'SECURITY_THREAT')
+    );
     let overallStatus: ScanOverallStatus = 'HEALTHY';
 
     if (hasCritical) {
@@ -313,7 +323,7 @@ export class ScanOrchestrator {
       overallStatus = 'WARNING';
     } else if (propagationSummary.propagationPercentage < 90) {
       overallStatus = 'PROPAGATING';
-    } else if (hasWarning) {
+    } else if (hasDnsInfrastructureWarning) {
       overallStatus = 'WARNING';
     } else {
       overallStatus = 'HEALTHY';
