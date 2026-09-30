@@ -18,7 +18,11 @@ import {
   HelpCircle,
   Server,
   Activity,
-  Radio
+  Radio,
+  Search,
+  Zap,
+  TrendingUp,
+  Table as TableIcon
 } from 'lucide-react';
 
 interface GlobalPropagationMapProps {
@@ -54,15 +58,50 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
   const [lockedResolver, setLockedResolver] = useState<ResolverQueryResult | null>(null);
   const [dockSide, setDockSide] = useState<'left' | 'right'>('right');
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'leaflet' | 'svg'>('leaflet');
+  const [viewMode, setViewMode] = useState<'map' | 'matrix'>('map');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [showWhyModal, setShowWhyModal] = useState<boolean>(false);
 
   const continents = ['ALL', 'North America', 'Europe', 'Asia', 'Oceania', 'South America'];
+
+  // Telemetry Aggregations
+  const totalCount = resolverResults.length;
+  const matchingCount = resolverResults.filter((r) => r.matchesCanonical).length;
+  const differentCount = resolverResults.filter((r) => !r.matchesCanonical && r.status === 'SUCCESS').length;
+  const failureCount = resolverResults.filter(
+    (r) => r.status === 'TIMEOUT' || r.status === 'SERVFAIL' || r.status === 'ERROR'
+  ).length;
+  const convergencePct = totalCount > 0 ? Math.round((matchingCount / totalCount) * 100) : 0;
+  const avgLatency =
+    totalCount > 0
+      ? Math.round(resolverResults.reduce((acc, r) => acc + (r.responseTimeMs || 0), 0) / totalCount)
+      : 0;
+  const fastestResolver = useMemo(() => {
+    if (resolverResults.length === 0) return null;
+    return [...resolverResults].sort((a, b) => (a.responseTimeMs || 999) - (b.responseTimeMs || 999))[0];
+  }, [resolverResults]);
 
   const filteredResolvers = useMemo(() => {
     if (selectedContinent === 'ALL') return resolverResults;
     return resolverResults.filter((r) => r.continent === selectedContinent);
   }, [resolverResults, selectedContinent]);
+
+  const displayedResolvers = useMemo(() => {
+    let list = filteredResolvers;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (r) =>
+          r.provider.toLowerCase().includes(q) ||
+          r.resolverIp.includes(q) ||
+          (r.locationLabel && r.locationLabel.toLowerCase().includes(q)) ||
+          (r.country && r.country.toLowerCase().includes(q)) ||
+          r.continent.toLowerCase().includes(q) ||
+          (r.answers && r.answers.some((ans) => ans.toLowerCase().includes(q)))
+      );
+    }
+    return list;
+  }, [filteredResolvers, searchQuery]);
 
   const activeResolver = lockedResolver || hoveredResolver;
   const isLocked = Boolean(lockedResolver);
@@ -76,8 +115,6 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
 
   const handleMarkerHover = (res: ResolverQueryResult) => {
     if (!lockedResolver) {
-      // Auto-position on opposite side: if pin is in the East (Asia/Oceania), dock on Left!
-      // If pin is in the West (Americas/Europe), dock on Right!
       setDockSide(res.longitude >= 15 ? 'left' : 'right');
       setHoveredResolver(res);
       setShowWhyModal(false);
@@ -122,8 +159,8 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl overflow-hidden transition-colors relative isolate z-0">
-      {/* Header and Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      {/* 1. Header & Live Indicator */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center space-x-2">
             <Globe className="w-5 h-5 text-sky-500 dark:text-sky-400" />
@@ -141,20 +178,47 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Hover over any vantage marker to preview live response telemetry, or click to lock and inspect
+            Observing propagation convergence across 14 Anycast vantage datacenters worldwide
           </p>
         </div>
 
-        {/* View Toggle & Continent Filter */}
+        {/* View Mode Toggle & Continent Filter */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Segmented View Switcher: Map vs Telemetry Matrix */}
           <div className="flex rounded-lg bg-slate-100 dark:bg-slate-950 p-1 border border-slate-200 dark:border-slate-800 text-xs">
+            <button
+              onClick={() => setViewMode('map')}
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md font-medium transition-colors ${
+                viewMode === 'map'
+                  ? 'bg-white dark:bg-slate-800 text-sky-700 dark:text-sky-300 shadow-xs font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>World Map</span>
+            </button>
+            <button
+              onClick={() => setViewMode('matrix')}
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md font-medium transition-colors ${
+                viewMode === 'matrix'
+                  ? 'bg-white dark:bg-slate-800 text-sky-700 dark:text-sky-300 shadow-xs font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Telemetry Matrix</span>
+            </button>
+          </div>
+
+          {/* Continent Filter Pills */}
+          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-950 p-1 border border-slate-200 dark:border-slate-800 text-xs overflow-x-auto">
             {continents.map((c) => (
               <button
                 key={c}
                 onClick={() => setSelectedContinent(c)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-2 py-1 rounded-md text-xs whitespace-nowrap transition-colors ${
                   selectedContinent === c
-                    ? 'bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/30 font-semibold'
+                    ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -162,21 +226,75 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
               </button>
             ))}
           </div>
-
-          <button
-            onClick={() => setViewMode(viewMode === 'leaflet' ? 'svg' : 'leaflet')}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700 text-xs transition-colors"
-            title="Toggle between Satellite/Street Tile map and Vector SVG projection"
-          >
-            <Layers className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-            <span>{viewMode === 'leaflet' ? 'Vector Projection' : 'Interactive Map'}</span>
-          </button>
         </div>
       </div>
 
-      {/* Map Canvas */}
-      <div className="relative w-full h-[480px] sm:h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800/80 bg-slate-100 dark:bg-[#090d16] isolate z-0">
-        {viewMode === 'leaflet' ? (
+      {/* 2. Key Telemetry Metrics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
+              Convergence
+            </span>
+            <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
+              {convergencePct}%{' '}
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">
+                ({matchingCount}/{totalCount})
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
+              Propagating / Diff
+            </span>
+            <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400">
+              {differentCount}{' '}
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">vantages</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <Zap className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
+              Mean Global Latency
+            </span>
+            <span className="text-base font-bold font-mono text-sky-600 dark:text-sky-400">
+              {avgLatency} <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">ms</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+          <div className="truncate">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
+              Fastest Edge Node
+            </span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white font-mono truncate block">
+              {fastestResolver ? `${fastestResolver.provider} (${fastestResolver.responseTimeMs}ms)` : 'N/A'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Main Content: Interactive Map OR Telemetry Matrix */}
+      <div className="relative w-full h-[500px] sm:h-[520px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800/80 bg-slate-100 dark:bg-[#090d16] isolate z-0">
+        {viewMode === 'map' ? (
           <MapContainer
             center={[25, 10]}
             zoom={2}
@@ -223,83 +341,184 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
             ))}
           </MapContainer>
         ) : (
-          /* SVG Equirectangular Projection Fallback */
-          <div
-            onClick={handleCloseInfo}
-            className="relative w-full h-full flex items-center justify-center p-4 cursor-default"
-          >
-            <svg viewBox="0 0 1000 500" className="w-full h-full opacity-40">
-              <rect width="1000" height="500" fill="#090d16" />
-              {/* World outline grid lines */}
-              <line x1="0" y1="250" x2="1000" y2="250" stroke="#1f293d" strokeDasharray="4" />
-              <line x1="500" y1="0" x2="500" y2="500" stroke="#1f293d" strokeDasharray="4" />
-              {/* Simplified stylized land masses */}
-              <path
-                d="M 150 120 Q 220 80 320 120 Q 300 220 200 240 Z"
-                fill="#1e293b"
-                stroke="#334155"
-              />
-              <path
-                d="M 260 260 Q 320 260 340 380 Q 280 440 240 340 Z"
-                fill="#1e293b"
-                stroke="#334155"
-              />
-              <path
-                d="M 450 100 Q 560 90 580 180 Q 480 200 440 140 Z"
-                fill="#1e293b"
-                stroke="#334155"
-              />
-              <path
-                d="M 460 200 Q 580 210 560 360 Q 480 380 450 260 Z"
-                fill="#1e293b"
-                stroke="#334155"
-              />
-              <path
-                d="M 580 100 Q 820 90 850 240 Q 680 260 580 180 Z"
-                fill="#1e293b"
-                stroke="#334155"
-              />
-              <path
-                d="M 740 300 Q 860 300 850 400 Q 760 420 730 350 Z"
-                fill="#1e293b"
-                stroke="#334155"
-              />
-            </svg>
+          /* Live Telemetry Matrix (Replacing useless crude SVG) */
+          <div className="w-full h-full flex flex-col bg-white dark:bg-[#090d16] overflow-hidden text-xs">
+            {/* Filter toolbar */}
+            <div className="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter by city, country, provider, or IP..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono flex items-center justify-between sm:justify-end gap-3">
+                <span>
+                  Showing <strong>{displayedResolvers.length}</strong> of {resolverResults.length} vantage nodes
+                </span>
+                {canonicalAnswer.length > 0 && (
+                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/20">
+                    Canonical: {canonicalAnswer.slice(0, 2).join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
 
-            {/* Pins on SVG projection */}
-            {filteredResolvers.map((res) => {
-              const x = ((res.longitude + 180) / 360) * 1000;
-              const y = ((90 - res.latitude) / 180) * 500;
-              const isMatch = res.matchesCanonical;
-              const isFail = res.status === 'TIMEOUT' || res.status === 'SERVFAIL' || res.status === 'ERROR';
-              const isCurrentActive = activeResolver?.resolverId === res.resolverId;
+            {/* High-density Table */}
+            <div className="flex-1 overflow-y-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800 z-10">
+                  <tr>
+                    <th className="py-2.5 px-3">Vantage Datacenter</th>
+                    <th className="py-2.5 px-3">Continent</th>
+                    <th className="py-2.5 px-3">Latency</th>
+                    <th className="py-2.5 px-3">Reported TTL</th>
+                    <th className="py-2.5 px-3">Observed Answers</th>
+                    <th className="py-2.5 px-3">Convergence</th>
+                    <th className="py-2.5 px-3 text-right">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
+                  {displayedResolvers.map((res) => {
+                    const isMatch = res.matchesCanonical;
+                    const isFail = res.status === 'TIMEOUT' || res.status === 'SERVFAIL' || res.status === 'ERROR';
 
-              return (
-                <div
-                  key={res.resolverId}
-                  onMouseEnter={() => handleMarkerHover(res)}
-                  onMouseLeave={() => {
-                    if (!lockedResolver) setHoveredResolver(null);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMarkerClick(res);
-                  }}
-                  style={{ left: `${(x / 1000) * 100}%`, top: `${(y / 500) * 100}%` }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 ${
-                      isMatch
-                        ? 'bg-emerald-500 border-emerald-300 glow-green'
-                        : isFail
-                        ? 'bg-rose-500 border-rose-300 glow-red'
-                        : 'bg-amber-400 border-amber-200 glow-yellow'
-                    } transition-transform ${isCurrentActive ? 'scale-150 ring-2 ring-white' : 'group-hover:scale-150'}`}
-                  />
+                    return (
+                      <tr
+                        key={res.resolverId}
+                        onClick={() => handleMarkerClick(res)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors cursor-pointer group"
+                      >
+                        {/* Vantage Point */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                isMatch ? 'bg-emerald-500 glow-green' : isFail ? 'bg-rose-500 glow-red' : 'bg-amber-400 glow-yellow'
+                              }`}
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                <span>{res.provider}</span>
+                                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-normal">
+                                  {res.resolverIp}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {res.locationLabel ? `${res.locationLabel}, ${res.country}` : res.country}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Continent */}
+                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 font-medium">
+                          {res.continent}
+                        </td>
+
+                        {/* Latency */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              {res.responseTimeMs} ms
+                            </span>
+                            <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  res.responseTimeMs < 40
+                                    ? 'bg-emerald-500'
+                                    : res.responseTimeMs < 100
+                                    ? 'bg-sky-500'
+                                    : 'bg-amber-500'
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(15, (res.responseTimeMs / 180) * 100))}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Reported TTL */}
+                        <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400">
+                          {res.ttl ? `${res.ttl}s` : 'N/A'}
+                        </td>
+
+                        {/* Observed Answers */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {res.answers && res.answers.length > 0 ? (
+                              res.answers.map((ans) => (
+                                <span
+                                  key={ans}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
+                                    isMatch
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40'
+                                      : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40'
+                                  }`}
+                                >
+                                  {ans}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 italic text-[11px]">(None)</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Convergence Badge */}
+                        <td className="py-2.5 px-3">
+                          {isMatch ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
+                              <CheckCircle2 className="w-3 h-3" /> MATCH
+                            </span>
+                          ) : isFail ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50">
+                              <XCircle className="w-3 h-3" /> {res.status}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
+                              <AlertTriangle className="w-3 h-3" /> DIFFERENT
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Details / Inspect */}
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkerClick(res);
+                            }}
+                            className="px-2 py-1 rounded text-[11px] font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25 transition-colors"
+                          >
+                            Inspect &rarr;
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {displayedResolvers.length === 0 && (
+                <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                  <p className="font-semibold text-sm">No vantage nodes match "{searchQuery}"</p>
+                  <p className="text-xs mt-1">Try clearing your search query or switching continent filter.</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedContinent('ALL');
+                    }}
+                    className="mt-3 px-3 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-600 transition-colors"
+                  >
+                    Reset Filters
+                  </button>
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
         )}
 
