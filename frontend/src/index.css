@@ -1,0 +1,468 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#090d16] text-slate-100 font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f293d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Glowing animations for map & status badges */
+@keyframes pulseGlowGreen {
+  0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+  50% { box-shadow: 0 0 18px rgba(34, 197, 94, 0.9); }
+}
+
+@keyframes pulseGlowYellow {
+  0%, 100% { box-shadow: 0 0 8px rgba(234, 179, 8, 0.6); }
+  50% { box-shadow: 0 0 18px rgba(234, 179, 8, 0.9); }
+}
+
+@keyframes pulseGlowRed {
+  0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+  50% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.9); }
+}
+
+.glow-green {
+  animation: pulseGlowGreen 2s infinite;
+}
+
+.glow-yellow {
+  animation: pulseGlowYellow 2s infinite;
+}
+
+.glow-red {
+  animation: pulseGlowRed 2s infinite;
+}
+
+/* Leaflet map dark mode invert filter */
+.dark .dark-map .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+.leaflet-container {
+  background: #090d16 !important;
+  font-family: inherit;
+  isolation: isolate;
+  z-index: 1 !important;
+}
+
+/* Ensure Leaflet controls and map panes stay contained and never overlap sticky navbar */
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10 !important;
+}
+
+.leaflet-pane {
+  z-index: 5 !important;
+}
+
+.leaflet-control {
+  z-index: 10 !important;
+}
+
+/* Custom dark leaflet tooltip */
+.custom-dark-tooltip {
+  background: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f1f5f9 !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+.custom-dark-tooltip::before {
+  border-top-color: #334155 !important;
+}
+
+/* Hide default leaflet popup wrapper styling if any */
+.leaflet-popup-content-wrapper {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.leaflet-popup-tip {
+  background: #0f172a !important;
+}
+
+/* Dark mode header background */
+.dark header {
+  background-color: #090d16 !important;
+  border-bottom-color: #1e293b !important;
+}
+
+/* ========================================================================= */
+/* Light Mode Theme System (Active when html does not have .dark)            */
+/* ========================================================================= */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) [class*="bg-[#090d16]"],
+html:not(.dark) .bg-\[\#090d16\],
+html:not(.dark) .bg-\[\#090d16\]\/95 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) header {
+  background-color: #ffffff !important;
+  border-bottom-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+}
+
+html:not(.dark) header nav {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .bg-slate-900 {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .bg-slate-900\/60,
+html:not(.dark) .bg-slate-900\/80 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-slate-950\/60,
+html:not(.dark) .bg-slate-950\/70,
+html:not(.dark) .bg-slate-950\/80,
+html:not(.dark) .bg-slate-950\/90 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .bg-slate-800,
+html:not(.dark) .bg-slate-800\/60,
+html:not(.dark) .bg-slate-800\/80 {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .bg-\[\#0d1322\] {
+  background-color: #ffffff !important;
+}
+
+/* Borders */
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-800\/60,
+html:not(.dark) .border-slate-800\/80,
+html:not(.dark) .border-slate-900 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .border-slate-700,
+html:not(.dark) .border-slate-700\/80 {
+  border-color: #cbd5e1 !important;
+}
+
+/* Typography */
+html:not(.dark) .text-white {
+  color: #0f172a !important;
+}
+
+/* Ensure buttons and badges with dark/saturated backgrounds always keep white text */
+html:not(.dark) .btn-primary,
+html:not(.dark) .btn-cta,
+html:not(.dark) button.btn-primary,
+html:not(.dark) button.bg-sky-600,
+html:not(.dark) button.bg-purple-600,
+html:not(.dark) button.bg-emerald-600,
+html:not(.dark) button.bg-rose-600,
+html:not(.dark) button.bg-indigo-600 {
+  color: #ffffff !important;
+}
+
+/* Explicit Navigation Tabs Protection (Light & Dark) */
+html:not(.dark) .nav-item-btn {
+  color: #334155 !important; /* Rich slate-700 */
+  background-color: transparent;
+}
+
+html:not(.dark) .nav-item-btn:hover {
+  color: #0f172a !important; /* Deep slate-950 */
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .nav-item-btn.nav-item-active {
+  color: #0369a1 !important; /* Deep Sky 700 */
+  background-color: #ffffff !important;
+  border-color: #7dd3fc !important; /* Sky 300 */
+}
+
+html:not(.dark) .nav-item-btn span {
+  color: inherit !important;
+}
+
+html:not(.dark) .nav-item-btn:hover span {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .nav-item-btn.nav-item-active span {
+  color: #0369a1 !important;
+}
+
+html.dark .nav-item-btn {
+  color: #94a3b8 !important; /* Slate 400 */
+  background-color: transparent;
+}
+
+html.dark .nav-item-btn:hover {
+  color: #ffffff !important;
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+html.dark .nav-item-btn.nav-item-active {
+  color: #38bdf8 !important; /* Sky 400 */
+  background-color: rgba(14, 165, 233, 0.2) !important;
+  border-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+html.dark .nav-item-btn span {
+  color: inherit !important;
+}
+
+html.dark .nav-item-btn:hover span {
+  color: #ffffff !important;
+}
+
+html.dark .nav-item-btn.nav-item-active span {
+  color: #38bdf8 !important;
+}
+
+html:not(.dark) .text-slate-100 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) .text-slate-300 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important; /* Deep, sharp, readable slate */
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Interactive Hovers */
+html:not(.dark) [class*="hover:bg-slate-800"]:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) [class*="hover:bg-slate-700"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) [class*="hover:bg-slate-900"]:hover {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) [class*="hover:bg-slate-950"]:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .hover\:text-white:hover {
+  color: #0284c7 !important;
+}
+
+html:not(.dark) .hover\:text-slate-200:hover {
+  color: #0f172a !important;
+}
+
+/* Inputs & Selects */
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]),
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Universal Light Mode Card & Container Backgrounds */
+html:not(.dark) [class*="bg-slate-900"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) [class*="bg-slate-950"] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) [class*="bg-slate-800"] {
+  background-color: #f1f5f9 !important;
+}
+
+/* Universal Light Mode Accent Badges */
+html:not(.dark) [class*="bg-sky-950"] {
+  background-color: #e0f2fe !important;
+}
+
+html:not(.dark) [class*="text-sky-400"],
+html:not(.dark) [class*="text-sky-300"] {
+  color: #0369a1 !important; /* Deep Sky 700 */
+}
+
+html:not(.dark) [class*="border-sky-800"] {
+  border-color: #7dd3fc !important;
+}
+
+html:not(.dark) [class*="bg-emerald-950"] {
+  background-color: #dcfce7 !important;
+}
+
+html:not(.dark) [class*="text-emerald-400"],
+html:not(.dark) [class*="text-emerald-300"] {
+  color: #15803d !important; /* Deep Emerald 700 */
+}
+
+html:not(.dark) [class*="border-emerald-800"] {
+  border-color: #86efac !important;
+}
+
+html:not(.dark) [class*="bg-rose-950"] {
+  background-color: #ffe4e6 !important;
+}
+
+html:not(.dark) [class*="text-rose-400"],
+html:not(.dark) [class*="text-rose-300"] {
+  color: #be123c !important; /* Deep Rose 700 */
+}
+
+html:not(.dark) [class*="border-rose-800"] {
+  border-color: #fda4af !important;
+}
+
+html:not(.dark) [class*="bg-amber-950"] {
+  background-color: #fef3c7 !important;
+}
+
+html:not(.dark) [class*="text-amber-400"],
+html:not(.dark) [class*="text-amber-300"] {
+  color: #b45309 !important; /* Deep Amber 700 */
+}
+
+html:not(.dark) [class*="border-amber-800"] {
+  border-color: #fcd34d !important;
+}
+
+/* Purple High-Contrast for Light Mode */
+html:not(.dark) [class*="bg-purple-950"] {
+  background-color: #f3e8ff !important;
+}
+
+html:not(.dark) [class*="text-purple-400"],
+html:not(.dark) [class*="text-purple-300"] {
+  color: #6b21a8 !important; /* Deep Purple 800 */
+}
+
+html:not(.dark) [class*="border-purple-800"] {
+  border-color: #d8b4fe !important;
+}
+
+/* Cyan High-Contrast for Light Mode */
+html:not(.dark) [class*="text-cyan-400"],
+html:not(.dark) [class*="text-cyan-300"] {
+  color: #0e7490 !important; /* Deep Cyan 700 */
+}
+
+/* Borders in Light Mode */
+html:not(.dark) [class*="border-slate-800"] {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) [class*="border-slate-700"] {
+  border-color: #cbd5e1 !important;
+}
+
+/* Light Map */
+html:not(.dark) .dark-map .leaflet-tile {
+  filter: none !important;
+}
+
+html:not(.dark) .leaflet-container {
+  background: #f1f5f9 !important;
+}
+
+html:not(.dark) .custom-dark-tooltip {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not(.dark) .custom-dark-tooltip::before {
+  border-top-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .custom-dark-tooltip p.text-white {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .custom-dark-tooltip p.text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Recharts in Light Mode */
+html:not(.dark) .recharts-cartesian-grid line {
+  stroke: #e2e8f0 !important;
+}
+
+html:not(.dark) .recharts-text {
+  fill: #64748b !important;
+}
+
+html:not(.dark) .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Scrollbars in Light Mode */
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+

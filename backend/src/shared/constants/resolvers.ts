@@ -1,0 +1,172 @@
+import { ResolverVantagePoint } from '../types/dns.js';
+
+export const GLOBAL_RESOLVER_VANTAGES: ResolverVantagePoint[] = [
+  {
+    id: 'cf-us-east',
+    provider: 'Cloudflare',
+    resolverIp: '1.1.1.1',
+    locationLabel: 'Anycast Resolver Vantage (Cloudflare Edge)',
+    country: 'United States',
+    continent: 'North America',
+    latitude: 39.0438,
+    longitude: -77.4874,
+    tier: 'privacy',
+    networkType: 'anycast'
+  },
+  {
+    id: 'cf-eu-west',
+    provider: 'Cloudflare',
+    resolverIp: '1.0.0.1',
+    locationLabel: 'Anycast Resolver Vantage (Cloudflare Edge)',
+    country: 'Ireland',
+    continent: 'Europe',
+    latitude: 53.3498,
+    longitude: -6.2603,
+    tier: 'privacy',
+    networkType: 'anycast'
+  },
+  {
+    id: 'google-us-central',
+    provider: 'Google Public DNS',
+    resolverIp: '8.8.8.8',
+    locationLabel: 'Anycast Resolver Vantage (Google Public DNS)',
+    country: 'United States',
+    continent: 'North America',
+    latitude: 41.8781,
+    longitude: -93.0977,
+    tier: 'public',
+    networkType: 'anycast'
+  },
+  {
+    id: 'google-asia-east',
+    provider: 'Google Public DNS',
+    resolverIp: '8.8.4.4',
+    locationLabel: 'Anycast Resolver Vantage (Google Public DNS)',
+    country: 'Japan',
+    continent: 'Asia',
+    latitude: 35.6762,
+    longitude: 139.6503,
+    tier: 'public',
+    networkType: 'anycast'
+  },
+  {
+    id: 'quad9-eu-central',
+    provider: 'Quad9',
+    resolverIp: '9.9.9.9',
+    locationLabel: 'Anycast Resolver Vantage (Quad9 Secure)',
+    country: 'Switzerland',
+    continent: 'Europe',
+    latitude: 47.3769,
+    longitude: 8.5417,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'quad9-us-west',
+    provider: 'Quad9',
+    resolverIp: '149.112.112.112',
+    locationLabel: 'Anycast Resolver Vantage (Quad9 Secondary)',
+    country: 'United States',
+    continent: 'North America',
+    latitude: 34.0522,
+    longitude: -118.2437,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'opendns-us-west',
+    provider: 'Cisco OpenDNS',
+    resolverIp: '208.67.222.222',
+    locationLabel: 'Anycast Resolver Vantage (Cisco OpenDNS)',
+    country: 'United States',
+    continent: 'North America',
+    latitude: 37.7749,
+    longitude: -122.4194,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'opendns-eu-uk',
+    provider: 'Cisco OpenDNS',
+    resolverIp: '208.67.220.220',
+    locationLabel: 'Anycast Resolver Vantage (Cisco OpenDNS)',
+    country: 'United Kingdom',
+    continent: 'Europe',
+    latitude: 51.5074,
+    longitude: -0.1278,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'adguard-eu',
+    provider: 'AdGuard DNS',
+    resolverIp: '94.140.14.14',
+    locationLabel: 'Anycast Resolver Vantage (AdGuard Edge)',
+    country: 'Germany',
+    continent: 'Europe',
+    latitude: 50.1109,
+    longitude: 8.6821,
+    tier: 'privacy',
+    networkType: 'anycast'
+  },
+  {
+    id: 'adguard-asia',
+    provider: 'AdGuard DNS',
+    resolverIp: '94.140.15.15',
+    locationLabel: 'Anycast Resolver Vantage (AdGuard Edge)',
+    country: 'Singapore',
+    continent: 'Asia',
+    latitude: 1.3521,
+    longitude: 103.8198,
+    tier: 'privacy',
+    networkType: 'anycast'
+  },
+  {
+    id: 'cleanbrowsing-sa',
+    provider: 'CleanBrowsing',
+    resolverIp: '185.228.168.9',
+    locationLabel: 'Anycast Resolver Vantage (CleanBrowsing Edge)',
+    country: 'Brazil',
+    continent: 'South America',
+    latitude: -23.5505,
+    longitude: -46.6333,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'cf-security-au',
+    provider: 'Cloudflare Security',
+    resolverIp: '1.1.1.2',
+    locationLabel: 'Anycast Resolver Vantage (Cloudflare 1.1.1.2)',
+    country: 'Australia',
+    continent: 'Oceania',
+    latitude: -33.8688,
+    longitude: 151.2093,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'controld-ca',
+    provider: 'Control D',
+    resolverIp: '76.76.2.0',
+    locationLabel: 'Anycast Resolver Vantage (Control D Edge)',
+    country: 'Canada',
+    continent: 'North America',
+    latitude: 43.6532,
+    longitude: -79.3832,
+    tier: 'security',
+    networkType: 'anycast'
+  },
+  {
+    id: 'alidns-asia',
+    provider: 'Alibaba AliDNS',
+    resolverIp: '223.5.5.5',
+    locationLabel: 'Anycast Resolver Vantage (Alibaba AliDNS)',
+    country: 'China',
+    continent: 'Asia',
+    latitude: 30.2741,
+    longitude: 120.1551,
+    tier: 'public',
+    networkType: 'anycast'
+  }
+];
