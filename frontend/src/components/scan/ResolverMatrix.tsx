@@ -1,15 +1,27 @@
 import React, { useState } from 'react';
-import { Server, ArrowUpDown, CheckCircle, AlertTriangle, XCircle, Search } from 'lucide-react';
+import { Server, ArrowUpDown, CheckCircle, AlertTriangle, XCircle, Search, FileText } from 'lucide-react';
 import { ResolverQueryResult } from '@dnscheck/shared';
+import { ResolverDetailModal } from '../map/ResolverDetailModal.js';
 
 interface ResolverMatrixProps {
   results: ResolverQueryResult[];
+  canonicalAnswer?: string[];
+  domain?: string;
+  authoritativeServer?: string;
+  records?: Array<{ type: string; values: string[] }>;
 }
 
-export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
+export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({
+  results,
+  canonicalAnswer = [],
+  domain = '',
+  authoritativeServer = '',
+  records = []
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'provider' | 'responseTimeMs' | 'status'>('responseTimeMs');
   const [sortAsc, setSortAsc] = useState(true);
+  const [selectedResolver, setSelectedResolver] = useState<ResolverQueryResult | null>(null);
 
   const filtered = results
     .filter(
@@ -39,16 +51,22 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
     }
   };
 
+  const selectedCanonical = selectedResolver
+    ? records.find((rec) => rec.type === selectedResolver.recordType)?.values ||
+      selectedResolver.whyDifferent?.authoritativeAnswer ||
+      canonicalAnswer
+    : canonicalAnswer;
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-md dark:shadow-xl transition-colors">
       <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
             <Server className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Resolver Vantage Comparison Matrix</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Resolver Endpoint Comparison Matrix</h3>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            14 global recursive resolver points observing live response convergence
+            14 global recursive resolver endpoints observing live response convergence
           </p>
         </div>
 
@@ -59,7 +77,7 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Filter vantage points..."
+            placeholder="Filter resolver endpoints..."
             className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans shadow-xs"
           />
         </div>
@@ -71,12 +89,12 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
             <tr className="bg-slate-100 dark:bg-slate-950/80 text-slate-800 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 font-mono text-[11px] uppercase tracking-wider">
               <th className="py-3 px-4 cursor-pointer hover:text-sky-600 dark:hover:text-white" onClick={() => toggleSort('provider')}>
                 <div className="flex items-center space-x-1">
-                  <span>Provider & Vantage</span>
+                  <span>Provider & Endpoint</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
               <th className="py-3 px-4">Resolver IP</th>
-              <th className="py-3 px-4">Location</th>
+              <th className="py-3 px-4">Region / Type</th>
               <th className="py-3 px-4">Record Type</th>
               <th className="py-3 px-4 cursor-pointer hover:text-sky-600 dark:hover:text-white" onClick={() => toggleSort('responseTimeMs')}>
                 <div className="flex items-center space-x-1">
@@ -85,12 +103,13 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
                 </div>
               </th>
               <th className="py-3 px-4">Observed DNS Answer</th>
-              <th className="py-3 px-4 text-right cursor-pointer hover:text-sky-600 dark:hover:text-white" onClick={() => toggleSort('status')}>
-                <div className="flex items-center justify-end space-x-1">
+              <th className="py-3 px-4 text-center cursor-pointer hover:text-sky-600 dark:hover:text-white" onClick={() => toggleSort('status')}>
+                <div className="flex items-center justify-center space-x-1">
                   <span>Status</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
+              <th className="py-3 px-4 text-right">Audit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
@@ -99,7 +118,11 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
               const isFail = res.status === 'TIMEOUT' || res.status === 'SERVFAIL' || res.status === 'ERROR';
 
               return (
-                <tr key={res.resolverId} className="hover:bg-sky-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                <tr
+                  key={res.resolverId}
+                  onClick={() => setSelectedResolver(res)}
+                  className="hover:bg-sky-50/60 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+                >
                   <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-200">
                     {res.provider}
                   </td>
@@ -107,7 +130,7 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
                   <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-sans text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">{res.locationLabel}</span>{' '}
                     <span className="text-slate-500 font-normal">
-                      {res.networkType === 'anycast' ? '(Anycast Edge)' : `(${res.continent})`}
+                      {res.networkType === 'anycast' ? '(Global Anycast)' : `(${res.continent})`}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -137,7 +160,7 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
                       <span className="text-slate-400 italic">No answers</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-center">
                     {isMatch ? (
                       <span className="inline-flex items-center space-x-1.5 font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/30 px-2.5 py-1 rounded text-[11px] shadow-xs">
                         <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -155,12 +178,35 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
                       </span>
                     )}
                   </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedResolver(res);
+                      }}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded text-[11px] font-sans font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-sky-300 dark:border-slate-700 transition-colors"
+                      title="View RFC 1035 Evidence Telemetry"
+                    >
+                      <FileText className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+                      <span>Evidence</span>
+                    </button>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {selectedResolver && (
+        <ResolverDetailModal
+          result={selectedResolver}
+          canonicalAnswer={selectedCanonical}
+          domain={domain}
+          authoritativeServer={authoritativeServer}
+          onClose={() => setSelectedResolver(null)}
+        />
+      )}
     </div>
   );
 };

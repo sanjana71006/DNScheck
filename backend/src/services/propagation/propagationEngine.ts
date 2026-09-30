@@ -36,6 +36,8 @@ export class PropagationEngine {
             ttlReported: result.ttl,
             checkedAt: result.checkedAt,
             authoritativeSource: 'AUTHORITATIVE REFERENCE UNAVAILABLE',
+            variationType: 'NOT_COMPARABLE',
+            summaryLabel: 'Authoritative reference unavailable',
             possibleCauses: [
               'Authoritative nameservers did not provide a verified reference set.',
               'Comparison is marked NOT COMPARABLE.'
@@ -102,6 +104,8 @@ export class PropagationEngine {
             ttlReported: result.ttl,
             checkedAt: result.checkedAt,
             authoritativeSource: 'Authoritative Nameserver (Port 53 Direct)',
+            variationType: 'FAILURE',
+            summaryLabel: `Query failed: ${result.status}`,
             possibleCauses: [
               `Query returned ${result.status}`,
               result.error || 'Recursive query failed to complete'
@@ -125,12 +129,44 @@ export class PropagationEngine {
         };
       } else {
         mismatching++;
+        const sharedAnswers = normalizedAnswers.filter((ans) => canonical.includes(ans));
+        const sharedCount = sharedAnswers.length;
+        const totalResolverAnswers = normalizedAnswers.length;
+        const totalCanonicalAnswers = canonical.length;
+
+        let variationType: 'SUBSET' | 'PARTIAL_OVERLAP' | 'DISTINCT' = 'DISTINCT';
+        let summaryLabel = 'Distinct answer set';
         const possibleCauses: string[] = [];
+
+        if (totalResolverAnswers > 0 && sharedCount === totalResolverAnswers && totalResolverAnswers < totalCanonicalAnswers) {
+          variationType = 'SUBSET';
+          summaryLabel = `Valid subset of authoritative pool (${totalResolverAnswers} of ${totalCanonicalAnswers} records)`;
+          possibleCauses.push(
+            `Resolver returned a subset (${totalResolverAnswers} of ${totalCanonicalAnswers} records) of the authoritative multi-record pool. This is common when resolvers or authoritative servers limit answer size or perform round-robin load balancing. It does NOT indicate a stale record or propagation failure.`
+          );
+        } else if (sharedCount > 0 && sharedCount < totalResolverAnswers) {
+          variationType = 'PARTIAL_OVERLAP';
+          summaryLabel = `Partial overlap (${sharedCount} shared, ${totalResolverAnswers - sharedCount} distinct)`;
+          possibleCauses.push(
+            `Resolver returned some records present in the authoritative set (${sharedCount}) and some distinct (${totalResolverAnswers - sharedCount}). May indicate GeoDNS, Anycast routing, or an in-progress DNS update.`
+          );
+        } else {
+          variationType = 'DISTINCT';
+          summaryLabel = 'Distinct answer set';
+          possibleCauses.push(
+            'Resolver returned records completely distinct from the authoritative reference.'
+          );
+          possibleCauses.push(
+            'GeoDNS / Anycast edge server local to that recursive resolver endpoint.'
+          );
+          possibleCauses.push(
+            'Split-horizon DNS routing or regional provider steering.'
+          );
+        }
+
         if (result.ttl !== undefined && result.ttl > 0) {
           possibleCauses.push(`Resolver Cache Decay: ${result.ttl}s remaining TTL on cached response.`);
         }
-        possibleCauses.push('CDN / Anycast GeoDNS: Resolvers in different regions legitimately receive distinct IP pools.');
-        possibleCauses.push('Multi-Record Pool: Server pool rotation delivers alternative healthy addresses.');
 
         // RULE 9: Label as DIFFERENT RESPONSE, never automatically claim STALE
         return {
@@ -146,6 +182,8 @@ export class PropagationEngine {
             ttlReported: result.ttl,
             checkedAt: result.checkedAt,
             authoritativeSource: 'Authoritative Nameserver (Port 53 Direct)',
+            variationType,
+            summaryLabel,
             possibleCauses
           }
         };
@@ -176,7 +214,7 @@ export class PropagationEngine {
       availabilityPercentage,
       averageLatencyMs,
       isComparable: true,
-      statusMessage: `${matching}/${successfulResolvers} Vantages Converged (${propagationPercentage}%)`
+      statusMessage: `${matching}/${successfulResolvers} Endpoints Converged (${propagationPercentage}%)`
     };
 
     return { summary, evaluatedResults };

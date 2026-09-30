@@ -977,7 +977,7 @@ export const HowDnsWorksSection: React.FC = () => {
             <span>HOW DNSCheck VERIFIES DNS</span>
           </div>
           <p className="text-xs text-slate-300 font-light">
-            While standard clients query a single local resolver to reach a website, DNSCheck simultaneously queries the authoritative nameservers and global vantage points to audit consistency.
+            While standard clients query a single local resolver to reach a website, DNSCheck simultaneously queries the authoritative nameservers directly and 14 global recursive resolver endpoints to audit consistency.
           </p>
         </div>
 

@@ -104,4 +104,74 @@ describe('PropagationEngine', () => {
     expect(evaluatedResults[1].status).toBe('DIFFERENT');
     expect(evaluatedResults[1].matchesCanonical).toBe(false);
   });
+
+  it('correctly treats permutation of multi-record pool as MATCH (order independence)', () => {
+    const canonical = ['151.101.1.69', '151.101.65.69'];
+    const mockResolvers: ResolverQueryResult[] = [
+      {
+        resolverId: 'r1',
+        provider: 'Cloudflare',
+        resolverIp: '1.1.1.1',
+        locationLabel: 'Global Anycast',
+        country: 'US',
+        continent: 'North America',
+        latitude: 39.0,
+        longitude: -77.0,
+        recordType: 'A',
+        status: 'SUCCESS',
+        answers: ['151.101.65.69', '151.101.1.69'], // Reversed order
+        normalizedAnswers: ['151.101.65.69', '151.101.1.69'],
+        responseTimeMs: 20,
+        checkedAt: new Date().toISOString()
+      }
+    ];
+
+    const { summary, evaluatedResults } = PropagationEngine.calculateRecordPropagation(
+      'A',
+      canonical,
+      mockResolvers,
+      'authoritative'
+    );
+
+    expect(summary.propagationPercentage).toBe(100);
+    expect(summary.matchingResolvers).toBe(1);
+    expect(evaluatedResults[0].status).toBe('MATCH');
+    expect(evaluatedResults[0].matchesCanonical).toBe(true);
+  });
+
+  it('detects valid subset of authoritative multi-record pool and sets variationType to SUBSET', () => {
+    const canonical = ['151.101.1.69', '151.101.65.69', '151.101.129.69', '151.101.193.69'];
+    const mockResolvers: ResolverQueryResult[] = [
+      {
+        resolverId: 'r1',
+        provider: 'Google Public DNS',
+        resolverIp: '8.8.8.8',
+        locationLabel: 'Global Anycast',
+        country: 'US',
+        continent: 'North America',
+        latitude: 37.0,
+        longitude: -122.0,
+        recordType: 'A',
+        status: 'SUCCESS',
+        answers: ['151.101.1.69', '151.101.65.69'], // Valid subset (2 of 4)
+        normalizedAnswers: ['151.101.1.69', '151.101.65.69'],
+        responseTimeMs: 18,
+        checkedAt: new Date().toISOString()
+      }
+    ];
+
+    const { summary, evaluatedResults } = PropagationEngine.calculateRecordPropagation(
+      'A',
+      canonical,
+      mockResolvers,
+      'authoritative'
+    );
+
+    expect(summary.matchingResolvers).toBe(0);
+    expect(summary.mismatchingResolvers).toBe(1);
+    expect(evaluatedResults[0].status).toBe('DIFFERENT');
+    expect(evaluatedResults[0].whyDifferent?.variationType).toBe('SUBSET');
+    expect(evaluatedResults[0].whyDifferent?.summaryLabel).toContain('Valid subset');
+    expect(evaluatedResults[0].whyDifferent?.possibleCauses[0]).toContain('round-robin load balancing');
+  });
 });

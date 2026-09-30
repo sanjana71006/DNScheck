@@ -16,7 +16,7 @@ export const Footer: React.FC = () => {
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
             <Globe className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>14 Resolver Vantage Points</span>
+            <span>14 Global Resolver Endpoints</span>
           </div>
           <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
             <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />

@@ -165,7 +165,7 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
           <div className="flex items-center space-x-2">
             <Globe className="w-5 h-5 text-sky-500 dark:text-sky-400" />
             <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-              Global DNS Resolver Vantage Points
+              Global DNS Recursive Resolver Endpoints
             </h3>
             {isDemo ? (
               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
@@ -178,7 +178,7 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Observing propagation convergence across 14 Anycast vantage datacenters worldwide
+            Observing propagation convergence across 14 global recursive resolver endpoints
           </p>
         </div>
 
@@ -258,7 +258,7 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
             </span>
             <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400">
               {differentCount}{' '}
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">vantages</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">endpoints</span>
             </span>
           </div>
         </div>

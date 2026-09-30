@@ -275,7 +275,7 @@ export const QuickIpLookup: React.FC<QuickIpLookupProps> = ({ onScanDomain }) =>
                 onClick={() => onScanDomain(result.domain)}
                 className="px-3.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
               >
-                <span>Deep Scan on 14 Global Vantages</span>
+                <span>Deep Scan on 14 Global Endpoints</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -308,9 +308,13 @@ export const QuickIpLookup: React.FC<QuickIpLookupProps> = ({ onScanDomain }) =>
                           <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 block">
                             {ip}
                           </span>
-                          {ptr && (
+                          {ptr ? (
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate block">
                               PTR: {ptr}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate block italic">
+                              PTR: No PTR record
                             </span>
                           )}
                         </div>

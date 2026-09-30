@@ -88,8 +88,7 @@ export const DomainScannerHero: React.FC<DomainScannerHeroProps> = ({
             Verify DNS Propagation & Record Health Globally
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-2xl leading-relaxed">
-            Query authoritative nameservers directly and monitor live response convergence across 14 global resolver
-            vantage points in North America, Europe, Asia, Oceania, and South America.
+            Query authoritative nameservers directly and monitor live response convergence across 14 global recursive resolver endpoints.
           </p>
         </div>
 

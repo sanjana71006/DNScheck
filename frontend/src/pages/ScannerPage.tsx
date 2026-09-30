@@ -88,10 +88,20 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
           </div>
 
           {/* DNS Record Table */}
-          <RecordTable records={currentScan.records} resolverResults={currentScan.resolverResults} />
+          <RecordTable
+            records={currentScan.records}
+            resolverResults={currentScan.resolverResults}
+            domain={currentScan.domain}
+            authoritativeServer={currentScan.authoritativeSummary?.primaryNameserver}
+          />
 
-          {/* Resolver Vantage Matrix */}
-          <ResolverMatrix results={currentScan.resolverResults} />
+          {/* Resolver Endpoint Matrix */}
+          <ResolverMatrix
+            results={currentScan.resolverResults}
+            domain={currentScan.domain}
+            authoritativeServer={currentScan.authoritativeSummary?.primaryNameserver}
+            records={currentScan.records}
+          />
         </div>
       )}
     </div>

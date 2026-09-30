@@ -70,6 +70,8 @@ export interface WhyDifferentExplanation {
   ttlReported?: number;
   checkedAt: string;
   authoritativeSource: string;
+  variationType?: 'SUBSET' | 'PARTIAL_OVERLAP' | 'DISTINCT' | 'FAILURE' | 'NOT_COMPARABLE';
+  summaryLabel?: string;
   possibleCauses: string[];
 }
 

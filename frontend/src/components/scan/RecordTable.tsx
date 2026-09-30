@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Layers, Server } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Layers, Server, FileText } from 'lucide-react';
 import { ScanResult, ResolverQueryResult } from '@dnscheck/shared';
+import { ResolverDetailModal } from '../map/ResolverDetailModal.js';
 
 interface RecordTableProps {
   records: ScanResult['records'];
   resolverResults: ResolverQueryResult[];
+  domain?: string;
+  authoritativeServer?: string;
 }
 
-export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResults }) => {
+export const RecordTable: React.FC<RecordTableProps> = ({
+  records,
+  resolverResults,
+  domain = '',
+  authoritativeServer = ''
+}) => {
   const [expandedType, setExpandedType] = useState<string | null>(null);
+  const [selectedResolver, setSelectedResolver] = useState<ResolverQueryResult | null>(null);
 
   if (!records || records.length === 0) {
     return (
@@ -22,6 +31,12 @@ export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResul
     setExpandedType(expandedType === type ? null : type);
   };
 
+  const selectedCanonical = selectedResolver
+    ? records.find((rec) => rec.type === selectedResolver.recordType)?.values ||
+      selectedResolver.whyDifferent?.authoritativeAnswer ||
+      []
+    : [];
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-md dark:shadow-xl transition-colors">
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex items-center justify-between">
@@ -29,7 +44,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResul
           <Layers className="w-5 h-5 text-sky-600 dark:text-sky-400" />
           <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Authoritative & Discovered DNS Records</h3>
         </div>
-        <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Click a record row to expand resolver vantage breakdown</span>
+        <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Click a record row to expand resolver endpoint breakdown</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -101,7 +116,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResul
                       ) : (
                         <span className="inline-flex items-center space-x-1.5 text-amber-900 bg-amber-100 border border-amber-300 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30 px-2.5 py-1 rounded text-[11px] font-bold shadow-xs">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                          <span>DRIFT</span>
+                          <span>DIFFERENT</span>
                         </span>
                       )}
                     </td>
@@ -114,13 +129,14 @@ export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResul
                         <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-950/50 shadow-sm">
                           <p className="text-xs font-semibold text-slate-900 dark:text-white mb-2 flex items-center space-x-1.5">
                             <Server className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                            <span>Resolver Vantage Responses for {rec.type} Record</span>
+                            <span>Resolver Responses for {rec.type} Record</span>
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                             {matchingVantages.map((v) => (
                               <div
                                 key={v.resolverId}
-                                className={`p-2.5 rounded-lg border text-xs flex items-start justify-between shadow-xs ${
+                                onClick={() => setSelectedResolver(v)}
+                                className={`p-2.5 rounded-lg border text-xs flex items-start justify-between shadow-xs cursor-pointer hover:border-sky-400 dark:hover:border-sky-500 transition-colors ${
                                   v.matchesCanonical
                                     ? 'bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-800'
                                     : 'bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/20 dark:border-amber-800/60 dark:text-amber-200'
@@ -129,19 +145,32 @@ export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResul
                                 <div>
                                   <p className="font-bold text-slate-900 dark:text-slate-200">{v.provider}</p>
                                   <p className="text-[11px] text-slate-600 dark:text-slate-400">{v.locationLabel} • {v.resolverIp}</p>
-                                  <p className="font-mono text-[11px] text-sky-700 dark:text-sky-400 mt-1 truncate max-w-[200px] font-semibold">
+                                  <p className="font-mono text-[11px] text-sky-700 dark:text-sky-400 mt-1 truncate max-w-[180px] font-semibold">
                                     {v.answers.join(', ') || '(Empty)'}
                                   </p>
                                 </div>
-                                <span
-                                  className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
-                                    v.matchesCanonical
-                                      ? 'text-emerald-800 bg-emerald-100 border-emerald-300 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/30'
-                                      : 'text-amber-900 bg-amber-100 border-amber-300 dark:text-amber-300 dark:bg-amber-500/20 dark:border-amber-500/40'
-                                  }`}
-                                >
-                                  {v.matchesCanonical ? 'MATCH' : 'STALE'}
-                                </span>
+                                <div className="flex flex-col items-end space-y-1.5">
+                                  <span
+                                    className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                                      v.matchesCanonical
+                                        ? 'text-emerald-800 bg-emerald-100 border-emerald-300 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/30'
+                                        : 'text-amber-900 bg-amber-100 border-amber-300 dark:text-amber-300 dark:bg-amber-500/20 dark:border-amber-500/40'
+                                    }`}
+                                  >
+                                    {v.matchesCanonical ? 'MATCH' : 'DIFFERENT'}
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedResolver(v);
+                                    }}
+                                    className="text-[10px] font-sans text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 flex items-center space-x-1"
+                                    title="View Evidence Telemetry"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    <span>Evidence</span>
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -155,6 +184,16 @@ export const RecordTable: React.FC<RecordTableProps> = ({ records, resolverResul
           </tbody>
         </table>
       </div>
+
+      {selectedResolver && (
+        <ResolverDetailModal
+          result={selectedResolver}
+          canonicalAnswer={selectedCanonical}
+          domain={domain}
+          authoritativeServer={authoritativeServer}
+          onClose={() => setSelectedResolver(null)}
+        />
+      )}
     </div>
   );
 };

@@ -17,14 +17,14 @@ export const PropagationChart: React.FC<PropagationChartProps> = ({ propagation 
 
   const data = [
     { name: 'Matching (Converged)', value: propagation.matchingResolvers, color: '#10b981' },
-    { name: 'Stale / Mismatch', value: propagation.mismatchingResolvers, color: '#f59e0b' },
+    { name: 'Different Response', value: propagation.mismatchingResolvers, color: '#f59e0b' },
     { name: 'Failure / Timeout', value: propagation.failingResolvers, color: '#ef4444' }
   ].filter((d) => d.value > 0);
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md dark:shadow-xl flex flex-col items-center transition-colors">
       <div className="w-full flex items-center justify-between mb-2">
-        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Vantage Consensus Distribution</h4>
+        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Endpoint Consensus Distribution</h4>
         <span className="text-xs font-mono text-sky-700 dark:text-sky-400 font-bold">{propagation.propagationPercentage}%</span>
       </div>
       <p className="text-[11px] text-slate-500 dark:text-slate-400 self-start mb-4">
@@ -65,7 +65,7 @@ export const PropagationChart: React.FC<PropagationChartProps> = ({ propagation 
           <p className="text-emerald-700 dark:text-emerald-400 font-bold font-mono text-sm">{propagation.matchingResolvers}</p>
         </div>
         <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <p className="text-slate-600 dark:text-slate-400 text-[10px] font-medium">Mismatch</p>
+          <p className="text-slate-600 dark:text-slate-400 text-[10px] font-medium">Different</p>
           <p className="text-amber-800 dark:text-amber-400 font-bold font-mono text-sm">{propagation.mismatchingResolvers}</p>
         </div>
         <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs">
