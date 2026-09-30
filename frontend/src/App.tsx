@@ -7,6 +7,7 @@ import { MapPage } from './pages/MapPage.js';
 import { ResolversPage } from './pages/ResolversPage.js';
 import { RecordsPage } from './pages/RecordsPage.js';
 import { FindingsPage } from './pages/FindingsPage.js';
+import { ThreatIntelPage } from './pages/ThreatIntelPage.js';
 import { MonitoringPage } from './pages/MonitoringPage.js';
 import { HistoryPage } from './pages/HistoryPage.js';
 import { DocumentationPage } from './pages/DocumentationPage.js';
@@ -136,6 +137,15 @@ export const App: React.FC = () => {
         {activeTab === 'records' && <RecordsPage currentScan={currentScan} />}
 
         {activeTab === 'findings' && <FindingsPage currentScan={currentScan} />}
+
+        {activeTab === 'threat-intel' && (
+          <ThreatIntelPage
+            onScanDomain={(domain) => {
+              handleScan(domain, ['A', 'AAAA', 'MX', 'TXT', 'NS']);
+              setActiveTab('scanner');
+            }}
+          />
+        )}
 
         {activeTab === 'monitoring' && (
           <MonitoringPage

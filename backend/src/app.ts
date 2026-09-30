@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { scanRoutes } from './routes/scanRoutes.js';
 import { monitoringRoutes } from './routes/monitoringRoutes.js';
 import { healthRoutes } from './routes/healthRoutes.js';
+import threatIntelRoutes from './routes/threatIntelRoutes.js';
 
 export function createApp(): Application {
   const app = express();
@@ -42,6 +43,7 @@ export function createApp(): Application {
   app.use('/api', healthRoutes);
   app.use('/api', scanRoutes);
   app.use('/api/monitoring', monitoringRoutes);
+  app.use('/api/threat-intel', threatIntelRoutes);
 
   // Root welcome / discovery
   app.get('/', (req, res) => {
@@ -55,7 +57,8 @@ export function createApp(): Application {
         scans: '/api/scans',
         stream: '/api/scans/stream?domain=example.com',
         history: '/api/history',
-        monitoring: '/api/monitoring'
+        monitoring: '/api/monitoring',
+        threatIntel: '/api/threat-intel'
       }
     });
   });

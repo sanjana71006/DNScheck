@@ -18,6 +18,7 @@ import { DMARCValidation } from './validation/dmarcValidation.js';
 import { MXValidation } from './validation/mxValidation.js';
 import { CNAMEValidation } from './validation/cnameValidation.js';
 import { MisconfigurationDetectionService } from './misconfiguration/misconfigurationDetectionService.js';
+import { ThreatIntelService } from './threat/threatIntelService.js';
 import { DEMO_SCENARIOS } from './demo/fixtureData.js';
 import { Scan } from '../models/Scan.js';
 import { DNSRecord } from '../models/DNSRecord.js';
@@ -257,6 +258,16 @@ export class ScanOrchestrator {
     }
     const cnameResult = await CNAMEValidation.validate(domain, cnameRecords);
     allFindings.push(...cnameResult.findings);
+
+    // Cross-reference with DNS Threat Intelligence Telemetry
+    try {
+      const threatFinding = await ThreatIntelService.checkDomainThreat(domain);
+      if (threatFinding) {
+        allFindings.unshift(threatFinding);
+      }
+    } catch (threatErr) {
+      // Non-blocking for threat lookup
+    }
 
     updateStage('SECURITY_CHECKS', 'Security & misconfiguration checks completed', 'COMPLETED');
 

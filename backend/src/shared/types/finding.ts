@@ -8,6 +8,7 @@ export type FindingCategory =
   | 'SECURITY_DMARC'
   | 'SECURITY_MX'
   | 'SECURITY_CNAME'
+  | 'SECURITY_THREAT'
   | 'PERFORMANCE'
   | 'AVAILABILITY';
 

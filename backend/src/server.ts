@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { ENV } from './config/env.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { MonitoringScheduler } from './services/monitoring/monitoringScheduler.js';
+import { ThreatIntelService } from './services/threat/threatIntelService.js';
 import { logger } from './utils/logger.js';
 
 // Ensure Node.js on Windows prioritizes IPv4 to avoid getaddrinfo ENOTFOUND on MongoDB Atlas SRV/shard lookups
@@ -15,6 +16,14 @@ async function bootstrap() {
 
   // Connect Database
   await connectDB();
+
+  // Ingest Threat Telemetry dataset if not already loaded
+  try {
+    const seedResult = await ThreatIntelService.seedThreatData();
+    logger.info(`Threat Intelligence: ${seedResult.message}`);
+  } catch (seedErr) {
+    logger.warn('Initial threat data seed encountered non-fatal error:', seedErr);
+  }
 
   // Start Background Monitoring Scheduler
   MonitoringScheduler.start();

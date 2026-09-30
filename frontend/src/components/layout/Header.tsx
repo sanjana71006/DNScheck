@@ -13,7 +13,8 @@ import {
   ListFilter,
   CheckCircle2,
   Sun,
-  Moon
+  Moon,
+  Radio
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'records', label: 'Records', icon: Layers },
     { id: 'resolvers', label: 'Resolvers', icon: Server },
     { id: 'findings', label: 'Security', icon: ShieldAlert },
+    { id: 'threat-intel', label: 'Threat Intel', icon: Radio },
     { id: 'monitoring', label: 'Monitoring', icon: Clock },
     { id: 'history', label: 'History', icon: ListFilter },
     { id: 'docs', label: 'Docs', icon: BookOpen }

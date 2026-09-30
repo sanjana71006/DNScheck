@@ -152,5 +152,38 @@ export const api = {
 
   async getHealth(): Promise<{ status: string; database: string; uptimeSeconds: number; timestamp: string }> {
     return request<{ status: string; database: string; uptimeSeconds: number; timestamp: string }>('/health');
+  },
+
+  async getThreatStats(): Promise<any> {
+    return request<any>('/threat-intel/stats');
+  },
+
+  async getThreatLogs(params: {
+    page?: number;
+    limit?: number;
+    level?: string;
+    category?: string;
+    sensorId?: string;
+    search?: string;
+  } = {}): Promise<any> {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', String(params.page));
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.level) q.set('level', params.level);
+    if (params.category) q.set('category', params.category);
+    if (params.sensorId) q.set('sensorId', params.sensorId);
+    if (params.search) q.set('search', params.search);
+    return request<any>(`/threat-intel?${q.toString()}`);
+  },
+
+  async lookupDomainThreat(domain: string): Promise<any> {
+    return request<any>(`/threat-intel/lookup/${encodeURIComponent(domain)}`);
+  },
+
+  async seedThreatData(force = false): Promise<any> {
+    return request<any>('/threat-intel/seed', {
+      method: 'POST',
+      body: JSON.stringify({ force })
+    });
   }
 };
