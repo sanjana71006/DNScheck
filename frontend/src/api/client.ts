@@ -7,7 +7,14 @@ import {
   ScanStage
 } from '@dnscheck/shared';
 
-const API_BASE = '/api';
+const getApiBase = (): string => {
+  const envUrl = (import.meta as any)?.env?.VITE_API_URL;
+  if (!envUrl || typeof envUrl !== 'string') return '/api';
+  const clean = envUrl.trim().replace(/\/+$/, '');
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+};
+
+const API_BASE = getApiBase();
 
 export class ApiError extends Error {
   code: string;
