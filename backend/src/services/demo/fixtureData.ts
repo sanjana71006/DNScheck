@@ -194,11 +194,11 @@ export const DEMO_SCENARIOS: Record<string, Partial<ScanResult>> = {
         ttl: 3600,
         source: 'authoritative',
         propagationPercentage: 78.6,
-        status: 'MISMATCH'
+        status: 'DIFFERENT'
       }
     ],
     resolverResults: GLOBAL_RESOLVER_VANTAGES.map((v, idx) => {
-      // Create 2 mismatches in Europe/Asia and 1 timeout in South America
+      // 2 different responses (Quad9 Europe, AdGuard Asia) and 1 timeout (Level3 South America)
       if (idx === 4 || idx === 9) {
         return {
           resolverId: v.id,
@@ -210,13 +210,29 @@ export const DEMO_SCENARIOS: Record<string, Partial<ScanResult>> = {
           latitude: v.latitude,
           longitude: v.longitude,
           recordType: 'A',
-          status: 'MISMATCH',
-          answers: ['198.51.100.4'], // Stale IP
+          status: 'DIFFERENT',
+          answers: ['198.51.100.4'], // Distinct cached IP
           normalizedAnswers: ['198.51.100.4'],
           ttl: 120,
           responseTimeMs: 82,
           matchesCanonical: false,
-          checkedAt: new Date().toISOString()
+          checkedAt: new Date().toISOString(),
+          evidenceTag: 'DEMO_DATA' as const,
+          source: 'DEMO_DATA' as const,
+          whyDifferent: {
+            authoritativeAnswer: ['203.0.113.88'],
+            resolverAnswer: ['198.51.100.4'],
+            ttlReported: 120,
+            checkedAt: new Date().toISOString(),
+            authoritativeSource: 'Authoritative Nameserver (Port 53 Direct)',
+            variationType: 'DISTINCT',
+            summaryLabel: 'Distinct answer set',
+            possibleCauses: [
+              'Resolver returned records distinct from authoritative reference.',
+              'Resolver Cache Decay: 120s remaining TTL on cached response.',
+              'CDN / Anycast GeoDNS: Resolvers in different regions legitimately receive distinct IP pools.'
+            ]
+          }
         };
       }
       if (idx === 10) {
@@ -236,7 +252,18 @@ export const DEMO_SCENARIOS: Record<string, Partial<ScanResult>> = {
           responseTimeMs: 3500,
           error: 'Query timed out after 3500ms',
           matchesCanonical: false,
-          checkedAt: new Date().toISOString()
+          checkedAt: new Date().toISOString(),
+          evidenceTag: 'DEMO_DATA' as const,
+          source: 'DEMO_DATA' as const,
+          whyDifferent: {
+            authoritativeAnswer: ['203.0.113.88'],
+            resolverAnswer: [],
+            checkedAt: new Date().toISOString(),
+            authoritativeSource: 'Authoritative Nameserver (Port 53 Direct)',
+            variationType: 'FAILURE',
+            summaryLabel: 'Query timed out',
+            possibleCauses: ['Resolver failed to reply within 3500ms timeout.']
+          }
         };
       }
       return {
@@ -249,13 +276,15 @@ export const DEMO_SCENARIOS: Record<string, Partial<ScanResult>> = {
         latitude: v.latitude,
         longitude: v.longitude,
         recordType: 'A',
-        status: 'SUCCESS',
+        status: 'MATCH',
         answers: ['203.0.113.88'],
         normalizedAnswers: ['203.0.113.88'],
         ttl: 3600,
         responseTimeMs: Math.floor(35 + Math.random() * 45),
         matchesCanonical: true,
-        checkedAt: new Date().toISOString()
+        checkedAt: new Date().toISOString(),
+        evidenceTag: 'DEMO_DATA' as const,
+        source: 'DEMO_DATA' as const
       };
     }),
     findings: [

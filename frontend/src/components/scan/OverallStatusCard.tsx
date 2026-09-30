@@ -56,6 +56,21 @@ export const OverallStatusCard: React.FC<OverallStatusCardProps> = ({ scan }) =>
   const serialConsistent = scan.authoritativeSummary?.soaSerialsConsistent;
   const dominantSerial = scan.authoritativeSummary?.dominantSerial;
 
+  const totalResolvers = scan.totalResolversQueried || scan.resolverResults?.length || 14;
+  const matchingResolversCount = scan.resolverResults
+    ? scan.resolverResults.filter((r) => r.matchesCanonical).length
+    : scan.resolverAgreement;
+  const failureResolversCount = scan.resolverResults
+    ? scan.resolverResults.filter(
+        (r) => r.status === 'TIMEOUT' || r.status === 'SERVFAIL' || r.status === 'ERROR' || r.status === 'REFUSED'
+      ).length
+    : 0;
+  const differentResolversCount = scan.resolverResults
+    ? scan.resolverResults.filter(
+        (r) => !r.matchesCanonical && r.status !== 'TIMEOUT' && r.status !== 'SERVFAIL' && r.status !== 'ERROR' && r.status !== 'REFUSED'
+      ).length
+    : Math.max(0, totalResolvers - matchingResolversCount - failureResolversCount);
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-md dark:shadow-xl transition-colors">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
@@ -132,14 +147,30 @@ export const OverallStatusCard: React.FC<OverallStatusCardProps> = ({ scan }) =>
           </div>
         </div>
 
-        {/* Metric 2: Resolver Vantage Agreement */}
+        {/* Metric 2: Resolver Endpoint Consensus */}
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 shadow-xs">
-          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Resolver Consensus</p>
-          <div className="flex items-baseline space-x-1 font-mono">
-            <span className="text-3xl sm:text-4xl font-extrabold text-slate-950 dark:text-white">{scan.resolverAgreement}</span>
-            <span className="text-slate-500 dark:text-slate-400 text-lg font-medium">/ {scan.totalResolversQueried}</span>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Resolver Consensus</p>
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">{totalResolvers} Endpoints</span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">Global vantages report expected answer</p>
+          <div className="flex items-baseline space-x-1.5 font-mono">
+            <span className="text-3xl sm:text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">
+              {matchingResolversCount}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400 text-lg font-medium">/ {totalResolvers}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">match</span>
+          </div>
+          <div className="flex items-center space-x-1.5 text-[11px] mt-2 font-mono">
+            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{matchingResolversCount} Match</span>
+            <span className="text-slate-400">•</span>
+            <span className="text-amber-800 dark:text-amber-400 font-semibold">{differentResolversCount} Diff</span>
+            {failureResolversCount > 0 && (
+              <>
+                <span className="text-slate-400">•</span>
+                <span className="text-rose-700 dark:text-rose-400 font-semibold">{failureResolversCount} Fail</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Metric 3: Authoritative Nameservers */}
@@ -148,8 +179,11 @@ export const OverallStatusCard: React.FC<OverallStatusCardProps> = ({ scan }) =>
             <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Authoritative NS</p>
             <Server className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
           </div>
-          <div className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-950 dark:text-white">
-            {authNsCount}
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-950 dark:text-white">
+              {authNsCount}
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">nameservers</span>
           </div>
           <div className="flex items-center space-x-1.5 text-xs mt-2 truncate">
             <span
@@ -166,13 +200,16 @@ export const OverallStatusCard: React.FC<OverallStatusCardProps> = ({ scan }) =>
         {/* Metric 4: Security Scorecard Status */}
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Findings & Security</p>
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Security & Health</p>
             <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
           </div>
-          <div className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-950 dark:text-white">
-            {scan.findings.length}
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-950 dark:text-white">
+              {scan.findings.length}
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">findings</span>
           </div>
-          <div className="flex items-center space-x-2 text-[11px] mt-2 text-slate-500 dark:text-slate-400">
+          <div className="flex items-center space-x-2 text-[11px] mt-2 text-slate-500 dark:text-slate-400 font-mono">
             <span className="text-rose-700 dark:text-rose-400 font-bold">
               {scan.findings.filter((f) => f.severity === 'CRITICAL').length} Critical
             </span>

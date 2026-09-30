@@ -67,9 +67,11 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
   // Telemetry Aggregations
   const totalCount = resolverResults.length;
   const matchingCount = resolverResults.filter((r) => r.matchesCanonical).length;
-  const differentCount = resolverResults.filter((r) => !r.matchesCanonical && r.status === 'SUCCESS').length;
   const failureCount = resolverResults.filter(
-    (r) => r.status === 'TIMEOUT' || r.status === 'SERVFAIL' || r.status === 'ERROR'
+    (r) => r.status === 'TIMEOUT' || r.status === 'SERVFAIL' || r.status === 'ERROR' || r.status === 'REFUSED'
+  ).length;
+  const differentCount = resolverResults.filter(
+    (r) => !r.matchesCanonical && r.status !== 'TIMEOUT' && r.status !== 'SERVFAIL' && r.status !== 'ERROR' && r.status !== 'REFUSED'
   ).length;
   const convergencePct = totalCount > 0 ? Math.round((matchingCount / totalCount) * 100) : 0;
   const avgLatency =
@@ -230,7 +232,7 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
       </div>
 
       {/* 2. Key Telemetry Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
         <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
           <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
@@ -254,10 +256,25 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
           </div>
           <div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
-              Propagating / Diff
+              Different Response
             </span>
             <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400">
               {differentCount}{' '}
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">endpoints</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <XCircle className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
+              Timeout / Failure
+            </span>
+            <span className="text-base font-bold font-mono text-rose-600 dark:text-rose-400">
+              {failureCount}{' '}
               <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">endpoints</span>
             </span>
           </div>
@@ -269,7 +286,7 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
           </div>
           <div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
-              Mean Global Latency
+              Mean Latency
             </span>
             <span className="text-base font-bold font-mono text-sky-600 dark:text-sky-400">
               {avgLatency} <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">ms</span>
@@ -277,7 +294,7 @@ export const GlobalPropagationMap: React.FC<GlobalPropagationMapProps> = ({
           </div>
         </div>
 
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center space-x-3 col-span-2 sm:col-span-1">
           <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
             <TrendingUp className="w-4 h-4" />
           </div>
