@@ -1,6 +1,6 @@
 # DNSCheck 🌐
 ### Global DNS Propagation & Record Misconfiguration Verifier
-**CODEBEGUN HACKZEN 2026 — Topic #32**
+**Enterprise DNS Observability & Security Platform**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-green.svg)](https://nodejs.org/)
@@ -62,7 +62,7 @@ The core architectural differentiator of DNSCheck is the **strict delineation be
                          └─────────────────────────────┘
 ```
 
-### Why This Architecture Wins Hackathon Judging:
+### Architectural Highlights:
 - **Authoritative Nameservers (Zone Baseline):** Discovered dynamically via NS queries (e.g. `elliott.ns.cloudflare.com`). Hostnames are resolved to IP addresses and queried directly using `Resolver.setServers([authIp])`. This yields the authoritative canonical records and SOA serial numbers to detect primary/secondary zone replication lag.
 - **Recursive Resolver Vantage Points (Global Caching):** 14 distinct public resolver instances (Cloudflare, Google, Quad9, OpenDNS, AdGuard, CleanBrowsing, Alternate DNS, Level3, Control D) strategically chosen across **North America, Europe, Asia, Oceania, South America, and Africa**.
 - **Accurate Propagation Calculation:** Observed recursive responses are normalized and compared against the authoritative canonical baseline. If authoritative servers are unreachable, the engine gracefully falls back to consensus majority scoring.
@@ -198,9 +198,9 @@ docker compose up --build
 
 ---
 
-## 🎬 The Strongest Hackathon Demo Flow
+## 🎬 Recommended Exploration Flow
 
-For presentations and judges, follow this sequence:
+To test and explore DNSCheck:
 
 1. **Open the Dashboard:** Open `http://localhost:5173`.
 2. **Observe Real DNS Scanning:**
@@ -240,19 +240,19 @@ DNSCheck strictly adheres to non-intrusive security standards:
 
 ---
 
-## 🏆 Hackathon Judging Criteria Alignment
+## 📊 Technical Architecture & System Highlights
 
-| Criteria | Weight | How DNSCheck Excels |
+| Dimension | Specification | Architecture Detail |
 |---|---|---|
-| **Technical Architecture** | **20%** | Strict separation of Authoritative Nameservers vs Recursive Resolvers; canonical normalization pipeline; robust fallback to consensus when authoritative zone is unlisted. |
-| **System Reliability & Security** | **20%** | Concurrency throttles; query timeout wrappers; passive CNAME takeover detection; RFC 7208 multiple-SPF detection; RFC 7505 Null MX support. |
-| **Engineering Depth** | **20%** | Real Node.js DNS promises engine querying 14 global vantages; SOA serial synchronization analysis; DMARC tag parser; MongoDB compound indexing. |
-| **Developer Experience** | **15%** | Dark SRE observability dashboard; interactive Leaflet map; JSON/CSV export; side-by-side scan diff viewer; comprehensive REST API docs. |
-| **Scalability & Efficiency** | **15%** | Background cron scheduler; TTL-based cache layer preventing resolver spamming; Dockerized multi-stage containers; MongoDB TTL auto-purge. |
-| **Live Demo & Code** | **10%** | Seamless REAL DNS mode with instant fallback to DEMO DATA presets; comprehensive automated test suite (13 passing tests); zero compilation errors. |
+| **Technical Architecture** | **RFC-Compliant** | Strict separation of Authoritative Nameservers vs Recursive Resolvers; canonical normalization pipeline; robust consensus fallback when authoritative zone is unlisted. |
+| **System Reliability & Security** | **High Availability** | Concurrency throttles; query timeout wrappers; passive CNAME takeover detection; RFC 7208 multiple-SPF detection; RFC 7505 Null MX support. |
+| **Engineering Depth** | **Wire & DoH** | Real Node.js DNS promises engine querying 14 global vantages; SOA serial synchronization analysis; DMARC tag parser; MongoDB compound indexing. |
+| **Developer Experience** | **Modern SRE** | Dark SRE observability dashboard; interactive Leaflet map; JSON/CSV export; side-by-side scan diff viewer; comprehensive REST API docs. |
+| **Scalability & Efficiency** | **Optimized** | Background cron scheduler; TTL-based cache layer preventing resolver spamming; Dockerized multi-stage containers; MongoDB TTL auto-purge. |
+| **Reliability & Testing** | **100% Green** | Seamless REAL DNS mode with instant fallback to DEMO DATA presets; comprehensive automated test suite; zero compilation errors. |
 
 ---
 
 ## 📄 License
 This project is open-source under the **MIT License**.
-Developed for **CODEBEGUN HACKZEN 2026 — Topic #32**.
+Developed by the **DNSCheck Engineering Team**.

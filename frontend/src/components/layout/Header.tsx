@@ -102,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800/40 dark:hover:bg-amber-900/40'
                   : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/40 dark:hover:bg-emerald-900/40'
               }`}
-              title="Click to toggle between Real DNS queries and offline Hackathon Demo Fixtures"
+              title="Click to toggle between Real DNS queries and offline Demo Fixtures"
             >
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${isDemoMode ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}

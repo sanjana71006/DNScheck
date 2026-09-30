@@ -116,7 +116,7 @@ export const DocumentationPage: React.FC = () => {
       <div className="p-5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-xs shadow-xs">
         <h4 className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center space-x-2 mb-1">
           <CheckCircle2 className="w-4 h-4" />
-          <span>Hackathon Security & Passive Safety Guardrail</span>
+          <span>Passive Safety & Operational Guardrails</span>
         </h4>
         <p className="text-slate-700 dark:text-slate-300">
           DNSCheck is strictly an observability and passive diagnostic platform. It never performs port scanning, arbitrary network probing, brute-force subdomain generation, or intrusive takeover exploitation. All operations are safe RFC-compliant DNS queries.

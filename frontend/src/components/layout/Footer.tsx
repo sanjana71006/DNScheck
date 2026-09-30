@@ -29,7 +29,7 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="text-slate-500">
-          Built for <span className="text-slate-700 dark:text-slate-300 font-medium">CODEBEGUN HACKZEN 2026</span> • Topic #32
+          Enterprise DNS Observability & Security Platform &bull; RFC 1035 Compliant
         </div>
       </div>
     </footer>
