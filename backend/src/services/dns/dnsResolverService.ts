@@ -84,32 +84,32 @@ export class DNSResolverService {
           async () => {
             switch (recordType) {
               case 'A': {
-                const res = await resolver.resolve4(domain, { ttl: true });
-                answers = res.map((r) => r.address);
-                if (res.length > 0) ttl = res[0].ttl;
+                const res: any = await resolver.resolve4(domain, { ttl: true });
+                answers = Array.isArray(res) ? res.map((r: any) => r.address) : [];
+                if (res && res.length > 0) ttl = res[0].ttl;
                 break;
               }
               case 'AAAA': {
-                const res = await resolver.resolve6(domain, { ttl: true });
-                answers = res.map((r) => r.address);
-                if (res.length > 0) ttl = res[0].ttl;
+                const res: any = await resolver.resolve6(domain, { ttl: true });
+                answers = Array.isArray(res) ? res.map((r: any) => r.address) : [];
+                if (res && res.length > 0) ttl = res[0].ttl;
                 break;
               }
               case 'CNAME': {
-                const res = await resolver.resolveCname(domain);
+                const res: any = await resolver.resolveCname(domain);
                 answers = Array.isArray(res) ? res : [res];
                 ttl = 300;
                 break;
               }
               case 'MX': {
-                const res = await resolver.resolveMx(domain);
-                answers = res.map((r) => `${r.priority} ${r.exchange}`);
+                const res: any = await resolver.resolveMx(domain);
+                answers = Array.isArray(res) ? res.map((r: any) => `${r.priority} ${r.exchange}`) : [];
                 ttl = 300;
                 break;
               }
               case 'TXT': {
-                const res = await resolver.resolveTxt(domain);
-                answers = res.map((parts) => parts.join(''));
+                const res: any = await resolver.resolveTxt(domain);
+                answers = Array.isArray(res) ? res.map((parts: any) => (Array.isArray(parts) ? parts.join('') : String(parts))) : [];
                 ttl = 300;
                 break;
               }

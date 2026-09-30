@@ -216,10 +216,10 @@ export class AuthoritativeService {
               break;
             }
             case 'AAAA': {
-              const aaaa = await runWithTimeout(() => fallbackResolver.resolve6(normalizedDomain, { ttl: true }), 2500);
-              if (aaaa && aaaa.length > 0) {
+              const aaaa: any = await runWithTimeout(() => fallbackResolver.resolve6(normalizedDomain, { ttl: true }), 2500);
+              if (aaaa && Array.isArray(aaaa) && aaaa.length > 0) {
                 canonicalRecords['AAAA'] = NormalizationService.normalizeRecordAnswers(
-                  aaaa.map((r) => r.address),
+                  aaaa.map((r: any) => r.address),
                   'AAAA'
                 );
                 recordTtvs['AAAA'] = aaaa[0].ttl;
@@ -227,10 +227,10 @@ export class AuthoritativeService {
               break;
             }
             case 'MX': {
-              const mx = await runWithTimeout(() => fallbackResolver.resolveMx(normalizedDomain), 2500);
-              if (mx && mx.length > 0) {
+              const mx: any = await runWithTimeout(() => fallbackResolver.resolveMx(normalizedDomain), 2500);
+              if (mx && Array.isArray(mx) && mx.length > 0) {
                 canonicalRecords['MX'] = NormalizationService.normalizeRecordAnswers(
-                  mx.map((m) => `${m.priority} ${m.exchange}`),
+                  mx.map((m: any) => `${m.priority} ${m.exchange}`),
                   'MX'
                 );
                 recordTtvs['MX'] = 300;
@@ -238,10 +238,10 @@ export class AuthoritativeService {
               break;
             }
             case 'TXT': {
-              const txt = await runWithTimeout(() => fallbackResolver.resolveTxt(normalizedDomain), 2500);
-              if (txt && txt.length > 0) {
+              const txt: any = await runWithTimeout(() => fallbackResolver.resolveTxt(normalizedDomain), 2500);
+              if (txt && Array.isArray(txt) && txt.length > 0) {
                 canonicalRecords['TXT'] = NormalizationService.normalizeRecordAnswers(
-                  txt.map((t) => t.join('')),
+                  txt.map((t: any) => (Array.isArray(t) ? t.join('') : String(t))),
                   'TXT'
                 );
                 recordTtvs['TXT'] = 300;

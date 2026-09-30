@@ -123,12 +123,12 @@ export class MXValidation {
       // Passive resolution check of exchange hostname
       let resolvable = false;
       try {
-        const ips = await runWithTimeout(() => resolver.resolve4(exchange), 3000);
-        resolvable = ips && ips.length > 0;
+        const ips: any = await runWithTimeout(() => resolver.resolve4(exchange), 3000);
+        resolvable = Boolean(ips && Array.isArray(ips) && ips.length > 0);
       } catch (err: any) {
         try {
-          const ips6 = await runWithTimeout(() => resolver.resolve6(exchange), 2000);
-          resolvable = ips6 && ips6.length > 0;
+          const ips6: any = await runWithTimeout(() => resolver.resolve6(exchange), 2000);
+          resolvable = Boolean(ips6 && Array.isArray(ips6) && ips6.length > 0);
         } catch {
           resolvable = false;
         }

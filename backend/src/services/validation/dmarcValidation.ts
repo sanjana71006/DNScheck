@@ -27,8 +27,8 @@ export class DMARCValidation {
 
     let txtRecords: string[] = [];
     try {
-      const res = await runWithTimeout(() => resolver.resolveTxt(dmarcHost), 3000);
-      txtRecords = res.map((parts) => parts.join(''));
+      const res: any = await runWithTimeout(() => resolver.resolveTxt(dmarcHost), 3000);
+      txtRecords = Array.isArray(res) ? res.map((parts: any) => (Array.isArray(parts) ? parts.join('') : String(parts))) : [];
     } catch (err: any) {
       logger.debug(`DMARC lookup failed for ${dmarcHost}: ${err.message}`);
     }

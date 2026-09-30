@@ -8,7 +8,7 @@ import { ENV } from '../../config/env.js';
 import { inMemoryJobs, inMemorySnapshots } from '../../controllers/monitoringController.js';
 import { isDbConnected } from '../../config/db.js';
 
-let cronTask: cron.ScheduledTask | null = null;
+let cronTask: any = null;
 
 export class MonitoringScheduler {
   public static start(): void {

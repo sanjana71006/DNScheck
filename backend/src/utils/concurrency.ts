@@ -8,7 +8,7 @@ export async function runWithTimeout<T>(
   timeoutMs: number,
   timeoutErrorMsg = 'DNS query timed out'
 ): Promise<T> {
-  let timer: NodeJS.Timeout;
+  let timer: any;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       const err = new Error(timeoutErrorMsg);

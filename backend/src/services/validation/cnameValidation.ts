@@ -61,24 +61,24 @@ export class CNAMEValidation {
     let isNxDomain = false;
 
     try {
-      const a = await runWithTimeout(() => resolver.resolve4(cleanTarget), 3000);
-      targetResolves = a && a.length > 0;
+      const a: any = await runWithTimeout(() => resolver.resolve4(cleanTarget), 3000);
+      targetResolves = Boolean(a && Array.isArray(a) && a.length > 0);
     } catch (err: any) {
       if (err.code === 'NXDOMAIN') {
         isNxDomain = true;
       }
       // Try AAAA
       try {
-        const aaaa = await runWithTimeout(() => resolver.resolve6(cleanTarget), 2000);
-        targetResolves = aaaa && aaaa.length > 0;
+        const aaaa: any = await runWithTimeout(() => resolver.resolve6(cleanTarget), 2000);
+        targetResolves = Boolean(aaaa && Array.isArray(aaaa) && aaaa.length > 0);
       } catch (err6: any) {
         if (err6.code === 'NXDOMAIN') {
           isNxDomain = true;
         }
         // Try CNAME chain
         try {
-          const c = await runWithTimeout(() => resolver.resolveCname(cleanTarget), 2000);
-          targetResolves = !!c && (Array.isArray(c) ? c.length > 0 : true);
+          const c: any = await runWithTimeout(() => resolver.resolveCname(cleanTarget), 2000);
+          targetResolves = Boolean(c && (Array.isArray(c) ? c.length > 0 : Boolean(c)));
         } catch (errCname: any) {
           if (errCname.code === 'NXDOMAIN') {
             isNxDomain = true;
