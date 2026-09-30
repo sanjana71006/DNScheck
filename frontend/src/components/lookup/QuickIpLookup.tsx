@@ -12,7 +12,8 @@ import {
   Loader2,
   ExternalLink,
   ShieldCheck,
-  Network
+  Network,
+  Info
 } from 'lucide-react';
 import { api } from '../../api/client.js';
 
@@ -249,10 +250,21 @@ export const QuickIpLookup: React.FC<QuickIpLookupProps> = ({ onScanDomain }) =>
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {result.totalIps} IP {result.totalIps === 1 ? 'address' : 'addresses'} discovered &bull; Resolved in{' '}
-                  <span className="font-mono text-sky-600 dark:text-sky-400 font-bold">{result.responseTimeMs}ms</span>
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {result.totalIps} IP {result.totalIps === 1 ? 'address' : 'addresses'} discovered &bull; Resolved in{' '}
+                    <span className="font-mono text-sky-600 dark:text-sky-400 font-bold">{result.responseTimeMs}ms</span>
+                  </p>
+                  {result.totalIps > 1 && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-300 bg-slate-200/60 dark:bg-slate-800/80 px-2 py-0.5 rounded-full font-medium"
+                      title="Large web platforms return multiple Anycast IPs for DNS Round-Robin load balancing and automated failover across redundant datacenters."
+                    >
+                      <Info className="w-3 h-3 text-sky-500" />
+                      Anycast / Round-Robin Pool
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
