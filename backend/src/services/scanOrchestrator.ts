@@ -55,12 +55,13 @@ export class ScanOrchestrator {
 
     // Stage 1: Domain Validation
     updateStage('VALIDATE_DOMAIN', 'Validating domain syntax', 'RUNNING');
-    const domainValidation = DNSSyntaxValidation.isValidDomain(rawDomain);
+    const cleanedDomain = DNSSyntaxValidation.cleanDomainInput(rawDomain);
+    const domainValidation = DNSSyntaxValidation.isValidDomain(cleanedDomain);
     if (!domainValidation.valid) {
       updateStage('VALIDATE_DOMAIN', 'Domain syntax invalid', 'FAILED', domainValidation.reason);
       throw new Error(domainValidation.reason || 'Invalid domain syntax.');
     }
-    const domain = NormalizationService.normalizeDomain(rawDomain);
+    const domain = NormalizationService.normalizeDomain(cleanedDomain);
     updateStage('VALIDATE_DOMAIN', 'Domain validated successfully', 'COMPLETED', domain);
 
     // Check Demo Mode: strictly only when isDemo is explicitly true
@@ -151,7 +152,15 @@ export class ScanOrchestrator {
     const primaryRecordType: DNSRecordType = typesToQuery.length === 1 ? typesToQuery[0] : (typesToQuery.includes('A') ? 'A' : typesToQuery[0] || 'A');
 
     const resolverPromises = GLOBAL_RESOLVER_VANTAGES.map(async (vantage) => {
-      const queryRes = await dnsResolverService.query(domain, primaryRecordType, vantage.resolverIp);
+      const queryRes = await dnsResolverService.query(
+        domain,
+        primaryRecordType,
+        vantage.resolverIp,
+        {
+          transport: vantage.transport || 'UDP',
+          dohEndpoint: vantage.dohEndpoint
+        }
+      );
       const resItem: ResolverQueryResult = {
         resolverId: vantage.id,
         provider: vantage.provider,
@@ -170,7 +179,11 @@ export class ScanOrchestrator {
         error: queryRes.error,
         checkedAt: new Date().toISOString(),
         evidenceTag: 'LIVE_QUERY',
-        networkType: vantage.networkType || 'anycast'
+        networkType: vantage.networkType || 'anycast',
+        transport: queryRes.transport,
+        rcode: queryRes.rcode,
+        flags: queryRes.flags,
+        source: 'LIVE_DNS'
       };
       return resItem;
     });
@@ -192,15 +205,6 @@ export class ScanOrchestrator {
       allResolverResults,
       authoritativeSummary.source
     );
-
-    // If authoritative reference was empty but resolvers agreed on consensus, populate canonicalRecords
-    if (
-      (!authoritativeSummary.canonicalRecords[primaryRecordType] ||
-        authoritativeSummary.canonicalRecords[primaryRecordType].length === 0) &&
-      propagationSummary.canonicalValue.length > 0
-    ) {
-      authoritativeSummary.canonicalRecords[primaryRecordType] = propagationSummary.canonicalValue;
-    }
 
     const recordPropagation: Record<string, RecordPropagationSummary> = {
       [primaryRecordType]: propagationSummary
@@ -274,19 +278,26 @@ export class ScanOrchestrator {
     // Assemble Records Table
     const recordsList: ScanResult['records'] = [];
     for (const type of requestedRecordTypes) {
-      let vals = authoritativeSummary.canonicalRecords[type] || [];
-      if (vals.length === 0 && type === primaryRecordType) {
-        vals = propagationSummary.canonicalValue || [];
-      }
+      const vals = authoritativeSummary.canonicalRecords[type] || [];
       if (vals.length > 0) {
         recordsList.push({
           type,
           name: domain,
           values: vals,
           ttl: authoritativeSummary.recordTtvs?.[type] || 300,
-          source: authoritativeSummary.source === 'authoritative' ? 'authoritative' : 'resolver_consensus',
+          source: 'authoritative',
           propagationPercentage: type === primaryRecordType ? propagationSummary.propagationPercentage : 100,
           status: type === primaryRecordType && propagationSummary.propagationPercentage < 90 ? 'DIFFERENT' : 'MATCH'
+        });
+      } else if (authoritativeSummary.source === 'reference_unavailable') {
+        recordsList.push({
+          type,
+          name: domain,
+          values: ['AUTHORITATIVE REFERENCE UNAVAILABLE'],
+          ttl: 0,
+          source: 'reference_unavailable' as any,
+          propagationPercentage: 0,
+          status: 'DIFFERENT'
         });
       }
     }
@@ -298,6 +309,8 @@ export class ScanOrchestrator {
 
     if (hasCritical) {
       overallStatus = 'ERROR';
+    } else if (authoritativeSummary.source === 'reference_unavailable') {
+      overallStatus = 'WARNING';
     } else if (propagationSummary.propagationPercentage < 90) {
       overallStatus = 'PROPAGATING';
     } else if (hasWarning) {
@@ -420,6 +433,14 @@ export class ScanOrchestrator {
             responseTimeMs: r.responseTimeMs,
             error: r.error,
             matchesCanonical: r.matchesCanonical,
+            networkType: r.networkType,
+            evidenceTag: r.evidenceTag,
+            transport: r.transport || 'UDP',
+            rcode: r.rcode || 'NOERROR',
+            flags: r.flags,
+            source: r.source || 'LIVE_DNS',
+            isLive: true,
+            whyDifferent: r.whyDifferent,
             checkedAt: new Date(r.checkedAt)
           }))
         );

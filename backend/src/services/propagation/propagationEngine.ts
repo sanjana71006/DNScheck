@@ -11,35 +11,59 @@ export class PropagationEngine {
     recordType: DNSRecordType,
     canonicalAnswers: string[],
     resolverResults: ResolverQueryResult[],
-    source: 'authoritative' | 'consensus_fallback'
+    source: 'authoritative' | 'reference_unavailable' | 'consensus_fallback'
   ): {
     summary: RecordPropagationSummary;
     evaluatedResults: ResolverQueryResult[];
   } {
-    let canonical = NormalizationService.normalizeRecordAnswers(canonicalAnswers, recordType);
+    const canonical = NormalizationService.normalizeRecordAnswers(canonicalAnswers, recordType);
+    const isAuthoritativeAvailable = source === 'authoritative' && canonical.length > 0;
 
-    // If authoritative reference is missing/empty, find consensus among resolvers
-    if (canonical.length === 0 && resolverResults.length > 0) {
-      const successfulGroups = new Map<string, { count: number; answers: string[] }>();
-      for (const res of resolverResults) {
-        if (res.status === 'SUCCESS' && res.answers.length > 0) {
-          const normKey = NormalizationService.normalizeRecordAnswers(res.answers, recordType).join('::');
-          const existing = successfulGroups.get(normKey);
-          if (existing) {
-            existing.count++;
-          } else {
-            successfulGroups.set(normKey, { count: 1, answers: res.answers });
+    // RULE 10: If authoritative reference is unavailable, DO NOT invent a reference answer!
+    if (!isAuthoritativeAvailable) {
+      const evaluatedResults: ResolverQueryResult[] = resolverResults.map((result) => {
+        const normalizedAnswers = NormalizationService.normalizeRecordAnswers(result.answers, recordType);
+        return {
+          ...result,
+          status: result.status,
+          normalizedAnswers,
+          matchesCanonical: false,
+          evidenceTag: result.evidenceTag || 'LIVE_QUERY',
+          source: result.source || 'LIVE_DNS',
+          whyDifferent: {
+            authoritativeAnswer: [],
+            resolverAnswer: normalizedAnswers,
+            ttlReported: result.ttl,
+            checkedAt: result.checkedAt,
+            authoritativeSource: 'AUTHORITATIVE REFERENCE UNAVAILABLE',
+            possibleCauses: [
+              'Authoritative nameservers did not provide a verified reference set.',
+              'Comparison is marked NOT COMPARABLE.'
+            ]
           }
-        }
-      }
+        };
+      });
 
-      let maxCount = 0;
-      for (const group of successfulGroups.values()) {
-        if (group.count > maxCount) {
-          maxCount = group.count;
-          canonical = NormalizationService.normalizeRecordAnswers(group.answers, recordType);
-        }
-      }
+      const totalResolvers = resolverResults.length;
+      const successfulResolvers = resolverResults.filter((r) => r.status === 'SUCCESS').length;
+      const failingResolvers = totalResolvers - successfulResolvers;
+
+      const summary: RecordPropagationSummary = {
+        recordType,
+        canonicalValue: [],
+        totalResolvers,
+        matchingResolvers: 0,
+        mismatchingResolvers: 0,
+        failingResolvers,
+        propagationPercentage: 0,
+        availabilityPercentage:
+          totalResolvers > 0 ? Math.round((successfulResolvers / totalResolvers) * 1000) / 10 : 0,
+        averageLatencyMs: 0,
+        isComparable: false,
+        statusMessage: 'AUTHORITATIVE REFERENCE UNAVAILABLE — NOT COMPARABLE'
+      };
+
+      return { summary, evaluatedResults };
     }
 
     let matching = 0;
@@ -56,7 +80,14 @@ export class PropagationEngine {
         latencyCount++;
       }
 
-      if (result.status !== 'SUCCESS' && result.status !== 'MATCH') {
+      // Check for query failure
+      if (
+        result.status === 'TIMEOUT' ||
+        result.status === 'SERVFAIL' ||
+        result.status === 'ERROR' ||
+        result.status === 'REFUSED' ||
+        result.status === 'NXDOMAIN'
+      ) {
         failing++;
         return {
           ...result,
@@ -64,20 +95,22 @@ export class PropagationEngine {
           normalizedAnswers,
           matchesCanonical: false,
           evidenceTag: result.evidenceTag || 'LIVE_QUERY',
+          source: 'LIVE_DNS',
           whyDifferent: {
             authoritativeAnswer: canonical,
             resolverAnswer: [],
             ttlReported: result.ttl,
             checkedAt: result.checkedAt,
-            authoritativeSource: source === 'authoritative' ? 'Authoritative DNS' : 'Consensus Reference',
+            authoritativeSource: 'Authoritative Nameserver (Port 53 Direct)',
             possibleCauses: [
-              `Resolver query returned ${result.status}`,
-              result.error || 'Query failed or timed out reaching recursive resolver'
+              `Query returned ${result.status}`,
+              result.error || 'Recursive query failed to complete'
             ]
           }
         };
       }
 
+      // Order-independent Set Comparison
       const isMatch = NormalizationService.areRecordSetsEqual(normalizedAnswers, canonical, recordType);
 
       if (isMatch) {
@@ -87,29 +120,32 @@ export class PropagationEngine {
           status: 'MATCH' as const,
           normalizedAnswers,
           matchesCanonical: true,
-          evidenceTag: result.evidenceTag || 'LIVE_QUERY'
+          evidenceTag: result.evidenceTag || 'LIVE_QUERY',
+          source: 'LIVE_DNS'
         };
       } else {
         mismatching++;
         const possibleCauses: string[] = [];
         if (result.ttl !== undefined && result.ttl > 0) {
-          possibleCauses.push(`Resolver Cache: ${result.ttl}s TTL remaining on cached response.`);
+          possibleCauses.push(`Resolver Cache Decay: ${result.ttl}s remaining TTL on cached response.`);
         }
-        possibleCauses.push('CDN / Anycast GeoDNS: Resolvers in different regions receive localized IP pools or load balancers.');
-        possibleCauses.push('Multi-Record Pool: Nameservers serve varying subsets from a dynamic record cluster.');
+        possibleCauses.push('CDN / Anycast GeoDNS: Resolvers in different regions legitimately receive distinct IP pools.');
+        possibleCauses.push('Multi-Record Pool: Server pool rotation delivers alternative healthy addresses.');
 
+        // RULE 9: Label as DIFFERENT RESPONSE, never automatically claim STALE
         return {
           ...result,
           status: 'DIFFERENT' as const,
           normalizedAnswers,
           matchesCanonical: false,
           evidenceTag: result.evidenceTag || 'LIVE_QUERY',
+          source: 'LIVE_DNS',
           whyDifferent: {
             authoritativeAnswer: canonical,
             resolverAnswer: normalizedAnswers,
             ttlReported: result.ttl,
             checkedAt: result.checkedAt,
-            authoritativeSource: source === 'authoritative' ? 'Authoritative DNS' : 'Consensus Reference',
+            authoritativeSource: 'Authoritative Nameserver (Port 53 Direct)',
             possibleCauses
           }
         };
@@ -117,9 +153,16 @@ export class PropagationEngine {
     });
 
     const totalResolvers = resolverResults.length;
-    const propagationPercentage = totalResolvers > 0 ? Math.round((matching / totalResolvers) * 1000) / 10 : 0;
+    const successfulResolvers = matching + mismatching;
+
+    // RULE 8: Propagation / Convergence = Matching / Successful resolvers
+    const propagationPercentage =
+      successfulResolvers > 0 ? Math.round((matching / successfulResolvers) * 1000) / 10 : 0;
+
+    // Availability = Successful / Total Configured
     const availabilityPercentage =
-      totalResolvers > 0 ? Math.round(((totalResolvers - failing) / totalResolvers) * 1000) / 10 : 0;
+      totalResolvers > 0 ? Math.round((successfulResolvers / totalResolvers) * 1000) / 10 : 0;
+
     const averageLatencyMs = latencyCount > 0 ? Math.round(totalLatency / latencyCount) : 0;
 
     const summary: RecordPropagationSummary = {
@@ -131,7 +174,9 @@ export class PropagationEngine {
       failingResolvers: failing,
       propagationPercentage,
       availabilityPercentage,
-      averageLatencyMs
+      averageLatencyMs,
+      isComparable: true,
+      statusMessage: `${matching}/${successfulResolvers} Vantages Converged (${propagationPercentage}%)`
     };
 
     return { summary, evaluatedResults };

@@ -1,6 +1,6 @@
 export type DNSRecordType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS' | 'SOA' | 'SPF' | 'DMARC';
 
-export type QueryStatus = 'SUCCESS' | 'MATCH' | 'DIFFERENT' | 'NXDOMAIN' | 'SERVFAIL' | 'TIMEOUT' | 'ERROR' | 'MISMATCH';
+export type QueryStatus = 'SUCCESS' | 'MATCH' | 'DIFFERENT' | 'NXDOMAIN' | 'SERVFAIL' | 'TIMEOUT' | 'ERROR' | 'MISMATCH' | 'REFUSED';
 
 export interface MXRecordAnswer {
   exchange: string;
@@ -37,6 +37,31 @@ export interface ResolverVantagePoint {
   longitude: number;
   tier?: 'public' | 'security' | 'privacy';
   networkType?: 'anycast' | 'unicast';
+  transport?: 'UDP' | 'TCP' | 'DOH';
+  dohEndpoint?: string;
+}
+
+export interface DnsFlags {
+  aa?: boolean;
+  rd?: boolean;
+  ra?: boolean;
+  ad?: boolean;
+  cd?: boolean;
+}
+
+export interface AuthoritativeEvidence {
+  serverHostname?: string;
+  serverIp?: string;
+  recordType: DNSRecordType;
+  answers: string[];
+  rcode: string;
+  flags?: DnsFlags;
+  ttl?: number;
+  latencyMs: number;
+  timestamp: string;
+  isAuthoritative: boolean;
+  status: 'SUCCESS' | 'UNAVAILABLE' | 'TIMEOUT' | 'ERROR';
+  errorMessage?: string;
 }
 
 export interface WhyDifferentExplanation {
@@ -68,6 +93,10 @@ export interface ResolverQueryResult {
   checkedAt: string;
   evidenceTag?: 'LIVE_QUERY' | 'DEMO_DATA';
   networkType?: 'anycast' | 'unicast';
+  transport?: 'UDP' | 'TCP' | 'DOH';
+  rcode?: string;
+  flags?: DnsFlags;
+  source?: 'LIVE_DNS' | 'DEMO_DATA';
   whyDifferent?: WhyDifferentExplanation;
 }
 
@@ -86,9 +115,12 @@ export interface AuthoritativeResult {
   dominantSerial?: number;
   canonicalRecords: Record<string, string[]>;
   recordTtvs?: Record<string, number>;
-  source: 'authoritative' | 'consensus_fallback';
+  source: 'authoritative' | 'reference_unavailable' | 'consensus_fallback';
   queriedAt: string;
   primaryNameserver?: string;
   nameserverIp?: string;
   isLive?: boolean;
+  isAvailable?: boolean;
+  evidence?: Record<string, AuthoritativeEvidence>;
+  statusMessage?: string;
 }

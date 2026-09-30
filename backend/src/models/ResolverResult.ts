@@ -22,6 +22,10 @@ export interface IResolverResultDocument extends Document {
   matchesCanonical?: boolean;
   networkType?: string;
   evidenceTag?: string;
+  transport?: string;
+  rcode?: string;
+  flags?: any;
+  source?: string;
   isLive?: boolean;
   whyDifferent?: any;
   checkedAt: Date;
@@ -53,6 +57,10 @@ const ResolverResultSchema = new Schema<IResolverResultDocument>(
     matchesCanonical: { type: Boolean, default: false },
     networkType: { type: String },
     evidenceTag: { type: String },
+    transport: { type: String, default: 'UDP' },
+    rcode: { type: String, default: 'NOERROR' },
+    flags: { type: Schema.Types.Mixed },
+    source: { type: String, default: 'LIVE_DNS' },
     isLive: { type: Boolean },
     whyDifferent: { type: Schema.Types.Mixed },
     checkedAt: { type: Date, default: Date.now }

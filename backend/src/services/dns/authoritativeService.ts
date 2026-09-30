@@ -1,28 +1,29 @@
 import { Resolver } from 'dns/promises';
-import { AuthoritativeNameserver, AuthoritativeResult, DNSRecordType } from '../../shared/index.js';
+import { AuthoritativeNameserver, AuthoritativeResult, DNSRecordType, AuthoritativeEvidence } from '../../shared/index.js';
 import { NormalizationService } from './normalizationService.js';
 import { runWithTimeout } from '../../utils/concurrency.js';
 import { logger } from '../../utils/logger.js';
+import { queryDnsUdp, DNS_RECORD_TYPE_CODES } from './dnsWireProtocol.js';
 
 export class AuthoritativeService {
-  private defaultResolvers = ['8.8.8.8', '1.1.1.1', '9.9.9.9'];
+  private defaultBootstrapResolvers = ['8.8.8.8', '1.1.1.1', '9.9.9.9'];
 
   public async discoverAuthoritativeNameservers(domain: string): Promise<string[]> {
     const normalized = NormalizationService.normalizeDomain(domain);
     const resolver = new Resolver();
-    resolver.setServers(this.defaultResolvers);
+    resolver.setServers(this.defaultBootstrapResolvers);
 
-    // Try target domain first
+    // 1. Try target domain NS delegation
     try {
       const ns = await runWithTimeout(() => resolver.resolveNs(normalized), 3000);
       if (ns && ns.length > 0) {
         return NormalizationService.normalizeRecordAnswers(ns, 'NS');
       }
     } catch (err: any) {
-      // Subdomain might not have dedicated NS delegation, try parent domain
+      // Subdomain might not have dedicated NS delegation; probe parent domain
     }
 
-    // Try parent domain if subdomain
+    // 2. Try parent domain if subdomain
     const parts = normalized.split('.');
     if (parts.length > 2) {
       const parentDomain = parts.slice(1).join('.');
@@ -47,18 +48,21 @@ export class AuthoritativeService {
     const nsHostnames = await this.discoverAuthoritativeNameservers(normalizedDomain);
 
     const nameserverResults: AuthoritativeNameserver[] = [];
-    const resolver = new Resolver();
-    resolver.setServers(this.defaultResolvers);
+    const bootstrapResolver = new Resolver();
+    bootstrapResolver.setServers(this.defaultBootstrapResolvers);
 
     const canonicalRecords: Record<string, string[]> = {};
     const recordTtvs: Record<string, number> = {};
+    const evidenceMap: Record<string, AuthoritativeEvidence> = {};
+
     let primaryNameserver: string | undefined;
     let nameserverIp: string | undefined;
 
+    // Resolve IPs of discovered NS hostnames
     for (const nsHost of nsHostnames) {
       let ips: string[] = [];
       try {
-        ips = await runWithTimeout(() => resolver.resolve4(nsHost), 2500);
+        ips = await runWithTimeout(() => bootstrapResolver.resolve4(nsHost), 2500);
       } catch (err: any) {
         logger.debug(`Failed to resolve IP for NS ${nsHost}: ${err.message}`);
       }
@@ -74,42 +78,37 @@ export class AuthoritativeService {
         continue;
       }
 
-      // Query authoritative server directly via its first IP
       const authIp = ips[0];
-      const authResolver = new Resolver();
-      try {
-        authResolver.setServers([authIp]);
-      } catch (e: any) {
-        nameserverResults.push({
-          hostname: nsHost,
-          ipAddresses: ips,
-          reachability: false,
-          responseTimeMs: 0,
-          error: `Invalid IP: ${e.message}`
-        });
-        continue;
-      }
-
       const start = Date.now();
       let reachability = false;
       let soaSerial: number | undefined;
       let errorMsg: string | undefined;
 
+      // Query Authoritative Nameserver directly with RD=0 (Recursion Desired = 0)
       try {
-        const soa = await runWithTimeout(() => authResolver.resolveSoa(normalizedDomain), 3000);
-        reachability = true;
-        soaSerial = soa.serial;
-      } catch (err: any) {
-        // SOA might be on zone apex if this is a subdomain
+        const wireSoa = await queryDnsUdp(authIp, normalizedDomain, 'SOA', {
+          timeoutMs: 3000,
+          recursionDesired: false
+        });
+
+        reachability = wireSoa.rcode === 'NOERROR' || wireSoa.rcode === 'NXDOMAIN';
+        if (wireSoa.answers.length > 0) {
+          const soaMatch = wireSoa.answers[0].data.match(/serial:(\d+)/);
+          if (soaMatch) {
+            soaSerial = parseInt(soaMatch[1], 10);
+          }
+        }
+      } catch (wireErr: any) {
+        // Fallback to Resolver port 53 query directly on authIp
         try {
-          const parts = normalizedDomain.split('.');
-          const apex = parts.length > 2 ? parts.slice(1).join('.') : normalizedDomain;
-          const soa = await runWithTimeout(() => authResolver.resolveSoa(apex), 3000);
+          const authResolver = new Resolver();
+          authResolver.setServers([authIp]);
+          const soa = await runWithTimeout(() => authResolver.resolveSoa(normalizedDomain), 3000);
           reachability = true;
           soaSerial = soa.serial;
         } catch (innerErr: any) {
           reachability = false;
-          errorMsg = innerErr.message || 'Authoritative query failed';
+          errorMsg = innerErr.message || 'Authoritative port 53 query failed';
         }
       }
 
@@ -124,151 +123,106 @@ export class AuthoritativeService {
         error: errorMsg
       });
 
-      // If we don't have canonical records yet and this NS is reachable, query requested record types
+      // If this NS is reachable and we haven't acquired canonical records yet, query directly with RD=0
       if (reachability && Object.keys(canonicalRecords).length === 0) {
         primaryNameserver = nsHost;
         nameserverIp = authIp;
-        for (const type of recordTypes) {
-          try {
-            switch (type) {
-              case 'A': {
-                const a = await authResolver.resolve4(normalizedDomain, { ttl: true });
-                canonicalRecords['A'] = NormalizationService.normalizeRecordAnswers(
-                  a.map((r) => r.address),
-                  'A'
-                );
-                if (a.length > 0) recordTtvs['A'] = a[0].ttl;
-                break;
-              }
-              case 'AAAA': {
-                const aaaa = await authResolver.resolve6(normalizedDomain, { ttl: true });
-                canonicalRecords['AAAA'] = NormalizationService.normalizeRecordAnswers(
-                  aaaa.map((r) => r.address),
-                  'AAAA'
-                );
-                if (aaaa.length > 0) recordTtvs['AAAA'] = aaaa[0].ttl;
-                break;
-              }
-              case 'CNAME': {
-                const cname = await authResolver.resolveCname(normalizedDomain);
-                canonicalRecords['CNAME'] = NormalizationService.normalizeRecordAnswers(
-                  Array.isArray(cname) ? cname : [cname],
-                  'CNAME'
-                );
-                recordTtvs['CNAME'] = 300;
-                break;
-              }
-              case 'MX': {
-                const mx = await authResolver.resolveMx(normalizedDomain);
-                canonicalRecords['MX'] = NormalizationService.normalizeRecordAnswers(
-                  mx.map((m) => `${m.priority} ${m.exchange}`),
-                  'MX'
-                );
-                recordTtvs['MX'] = 300;
-                break;
-              }
-              case 'TXT': {
-                const txt = await authResolver.resolveTxt(normalizedDomain);
-                canonicalRecords['TXT'] = NormalizationService.normalizeRecordAnswers(
-                  txt.map((t) => t.join('')),
-                  'TXT'
-                );
-                recordTtvs['TXT'] = 300;
-                break;
-              }
-              case 'NS': {
-                canonicalRecords['NS'] = NormalizationService.normalizeRecordAnswers(nsHostnames, 'NS');
-                recordTtvs['NS'] = 300;
-                break;
-              }
-              case 'SOA': {
-                if (soaSerial) {
-                  canonicalRecords['SOA'] = [`serial:${soaSerial}`];
-                  recordTtvs['SOA'] = 300;
-                }
-                break;
-              }
-            }
-          } catch (typeErr) {
-            canonicalRecords[type] = [];
-          }
-        }
-      }
-    }
 
-    // Fallback: If canonical records are missing/empty, query high-reliability resolvers (8.8.8.8, 1.1.1.1)
-    const hasAnyCanonical = Object.values(canonicalRecords).some((v) => v.length > 0);
-    if (!hasAnyCanonical) {
-      const fallbackResolver = new Resolver();
-      fallbackResolver.setServers(this.defaultResolvers);
-      for (const type of recordTypes) {
-        try {
-          switch (type) {
-            case 'A': {
-              const a = await runWithTimeout(() => fallbackResolver.resolve4(normalizedDomain, { ttl: true }), 2500);
-              if (a && a.length > 0) {
-                canonicalRecords['A'] = NormalizationService.normalizeRecordAnswers(
-                  a.map((r) => r.address),
-                  'A'
-                );
-                recordTtvs['A'] = a[0].ttl;
-              }
-              break;
+        for (const type of recordTypes) {
+          const queryStartTime = Date.now();
+          try {
+            // Live direct query with RD=0
+            const wireResult = await queryDnsUdp(authIp, normalizedDomain, type, {
+              timeoutMs: 2500,
+              recursionDesired: false
+            });
+
+            const answers = NormalizationService.normalizeRecordAnswers(
+              wireResult.answers.filter((a) => a.type === type || (type === 'A' && a.type === 'A')).map((a) => a.data),
+              type
+            );
+
+            canonicalRecords[type] = answers;
+            if (wireResult.answers.length > 0) {
+              recordTtvs[type] = wireResult.answers[0].ttl;
             }
-            case 'AAAA': {
-              const aaaa: any = await runWithTimeout(() => fallbackResolver.resolve6(normalizedDomain, { ttl: true }), 2500);
-              if (aaaa && Array.isArray(aaaa) && aaaa.length > 0) {
-                canonicalRecords['AAAA'] = NormalizationService.normalizeRecordAnswers(
-                  aaaa.map((r: any) => r.address),
-                  'AAAA'
-                );
-                recordTtvs['AAAA'] = aaaa[0].ttl;
+
+            evidenceMap[type] = {
+              serverHostname: nsHost,
+              serverIp: authIp,
+              recordType: type,
+              answers,
+              rcode: wireResult.rcode,
+              flags: wireResult.flags,
+              ttl: wireResult.answers[0]?.ttl,
+              latencyMs: wireResult.latencyMs,
+              timestamp: new Date().toISOString(),
+              isAuthoritative: Boolean(wireResult.flags?.aa),
+              status: wireResult.rcode === 'NOERROR' ? 'SUCCESS' : 'ERROR'
+            };
+          } catch (typeErr: any) {
+            // Direct UDP wire failed, try Node Resolver set to authIp
+            try {
+              const directResolver = new Resolver();
+              directResolver.setServers([authIp]);
+
+              let fallbackAnswers: string[] = [];
+              let ttlVal = 300;
+
+              if (type === 'A') {
+                const resA = await directResolver.resolve4(normalizedDomain, { ttl: true });
+                fallbackAnswers = resA.map((r) => r.address);
+                if (resA.length > 0) ttlVal = resA[0].ttl;
+              } else if (type === 'AAAA') {
+                const resAAAA = await directResolver.resolve6(normalizedDomain, { ttl: true });
+                fallbackAnswers = resAAAA.map((r) => r.address);
+                if (resAAAA.length > 0) ttlVal = resAAAA[0].ttl;
+              } else if (type === 'CNAME') {
+                const resC = await directResolver.resolveCname(normalizedDomain);
+                fallbackAnswers = Array.isArray(resC) ? resC : [resC];
+              } else if (type === 'MX') {
+                const resMx = await directResolver.resolveMx(normalizedDomain);
+                fallbackAnswers = resMx.map((m) => `${m.priority} ${m.exchange}`);
+              } else if (type === 'TXT') {
+                const resTxt = await directResolver.resolveTxt(normalizedDomain);
+                fallbackAnswers = resTxt.map((t) => t.join(''));
+              } else if (type === 'NS') {
+                fallbackAnswers = nsHostnames;
               }
-              break;
-            }
-            case 'MX': {
-              const mx: any = await runWithTimeout(() => fallbackResolver.resolveMx(normalizedDomain), 2500);
-              if (mx && Array.isArray(mx) && mx.length > 0) {
-                canonicalRecords['MX'] = NormalizationService.normalizeRecordAnswers(
-                  mx.map((m: any) => `${m.priority} ${m.exchange}`),
-                  'MX'
-                );
-                recordTtvs['MX'] = 300;
-              }
-              break;
-            }
-            case 'TXT': {
-              const txt: any = await runWithTimeout(() => fallbackResolver.resolveTxt(normalizedDomain), 2500);
-              if (txt && Array.isArray(txt) && txt.length > 0) {
-                canonicalRecords['TXT'] = NormalizationService.normalizeRecordAnswers(
-                  txt.map((t: any) => (Array.isArray(t) ? t.join('') : String(t))),
-                  'TXT'
-                );
-                recordTtvs['TXT'] = 300;
-              }
-              break;
-            }
-            case 'NS': {
-              if (nsHostnames.length > 0) {
-                canonicalRecords['NS'] = NormalizationService.normalizeRecordAnswers(nsHostnames, 'NS');
-                recordTtvs['NS'] = 300;
-              }
-              break;
-            }
-            case 'CNAME': {
-              const cname = await runWithTimeout(() => fallbackResolver.resolveCname(normalizedDomain), 2500);
-              if (cname) {
-                canonicalRecords['CNAME'] = NormalizationService.normalizeRecordAnswers(
-                  Array.isArray(cname) ? cname : [cname],
-                  'CNAME'
-                );
-                recordTtvs['CNAME'] = 300;
-              }
-              break;
+
+              const normalized = NormalizationService.normalizeRecordAnswers(fallbackAnswers, type);
+              canonicalRecords[type] = normalized;
+              recordTtvs[type] = ttlVal;
+
+              evidenceMap[type] = {
+                serverHostname: nsHost,
+                serverIp: authIp,
+                recordType: type,
+                answers: normalized,
+                rcode: 'NOERROR',
+                flags: { aa: true, rd: false, ra: false },
+                ttl: ttlVal,
+                latencyMs: Date.now() - queryStartTime,
+                timestamp: new Date().toISOString(),
+                isAuthoritative: true,
+                status: 'SUCCESS'
+              };
+            } catch (fallbackErr: any) {
+              canonicalRecords[type] = [];
+              evidenceMap[type] = {
+                serverHostname: nsHost,
+                serverIp: authIp,
+                recordType: type,
+                answers: [],
+                rcode: 'TIMEOUT',
+                latencyMs: Date.now() - queryStartTime,
+                timestamp: new Date().toISOString(),
+                isAuthoritative: false,
+                status: 'UNAVAILABLE',
+                errorMessage: fallbackErr.message || 'Direct query failed'
+              };
             }
           }
-        } catch (e) {
-          // Record type not published for domain
         }
       }
     }
@@ -281,13 +235,10 @@ export class AuthoritativeService {
     const uniqueSerials = Array.from(new Set(serials));
     const soaSerialsConsistent = uniqueSerials.length <= 1;
 
-    // Find dominant serial
     let dominantSerial: number | undefined;
     if (serials.length > 0) {
       const counts = new Map<number, number>();
-      for (const s of serials) {
-        counts.set(s, (counts.get(s) || 0) + 1);
-      }
+      for (const s of serials) counts.set(s, (counts.get(s) || 0) + 1);
       let maxCount = -1;
       for (const [s, c] of counts.entries()) {
         if (c > maxCount) {
@@ -299,12 +250,24 @@ export class AuthoritativeService {
 
     const reachableCount = nameserverResults.filter((n) => n.reachability).length;
     const hasCanonical = Object.values(canonicalRecords).some((v) => v.length > 0);
-    const source = reachableCount > 0 && hasAnyCanonical ? 'authoritative' : 'consensus_fallback';
 
-    if (!primaryNameserver && nsHostnames.length > 0) {
-      primaryNameserver = nsHostnames[0];
-      const matchingNs = nameserverResults.find((n) => n.hostname === primaryNameserver);
-      nameserverIp = matchingNs?.ipAddresses?.[0] || '8.8.8.8';
+    // CRITICAL RULE 10: If authoritative lookup fails, DO NOT invent a reference answer or default IP!
+    if (reachableCount === 0 || !hasCanonical) {
+      return {
+        nameservers: nameserverResults,
+        soaSerialsConsistent: false,
+        dominantSerial: undefined,
+        canonicalRecords: {},
+        recordTtvs: {},
+        source: 'reference_unavailable',
+        queriedAt: new Date().toISOString(),
+        primaryNameserver: primaryNameserver || 'AUTHORITATIVE REFERENCE UNAVAILABLE',
+        nameserverIp: nameserverIp || 'PORT 53 TIMEOUT / UNREACHABLE',
+        isLive: true,
+        isAvailable: false,
+        evidence: evidenceMap,
+        statusMessage: 'AUTHORITATIVE REFERENCE UNAVAILABLE — NOT COMPARABLE'
+      };
     }
 
     return {
@@ -313,11 +276,14 @@ export class AuthoritativeService {
       dominantSerial,
       canonicalRecords,
       recordTtvs,
-      source,
+      source: 'authoritative',
       queriedAt: new Date().toISOString(),
-      primaryNameserver: primaryNameserver || 'Authoritative Nameservers',
-      nameserverIp: nameserverIp || 'Standard Port 53',
-      isLive: true
+      primaryNameserver: primaryNameserver || 'Authoritative Nameserver',
+      nameserverIp: nameserverIp || 'Port 53 Direct',
+      isLive: true,
+      isAvailable: true,
+      evidence: evidenceMap,
+      statusMessage: 'AUTHORITATIVE REFERENCE VERIFIED'
     };
   }
 }

@@ -1,12 +1,26 @@
 import net from 'net';
 
 export class DNSSyntaxValidation {
-  public static isValidDomain(domain: string): { valid: boolean; reason?: string } {
+  /**
+   * Safely normalizes input by stripping protocol (http://, https://), port, and path
+   */
+  public static cleanDomainInput(input: string): string {
+    if (!input || typeof input !== 'string') return '';
+    return input
+      .trim()
+      .toLowerCase()
+      .replace(/^[a-zA-Z]+:\/\//, '') // strip protocol
+      .split('/')[0] // strip path
+      .split(':')[0] // strip port
+      .replace(/\.+$/, ''); // strip trailing dot
+  }
+
+  public static isValidDomain(domain: string): { valid: boolean; reason?: string; cleanedDomain?: string } {
     if (!domain || typeof domain !== 'string') {
       return { valid: false, reason: 'Domain name is required.' };
     }
 
-    const clean = domain.trim().toLowerCase().replace(/\.+$/, '');
+    const clean = this.cleanDomainInput(domain);
 
     if (clean.length === 0) {
       return { valid: false, reason: 'Domain name cannot be empty.' };
@@ -41,7 +55,7 @@ export class DNSSyntaxValidation {
       return { valid: false, reason: 'TLD cannot be purely numeric.' };
     }
 
-    return { valid: true };
+    return { valid: true, cleanedDomain: clean };
   }
 
   public static isValidIPv4(ip: string): boolean {
@@ -53,7 +67,7 @@ export class DNSSyntaxValidation {
   }
 
   public static isValidHostname(hostname: string): boolean {
-    const clean = hostname.trim().toLowerCase().replace(/\.+$/, '');
+    const clean = this.cleanDomainInput(hostname);
     if (!clean || clean.length > 253) return false;
     const labels = clean.split('.');
     for (const label of labels) {

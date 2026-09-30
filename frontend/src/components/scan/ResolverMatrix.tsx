@@ -105,7 +105,10 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
                   </td>
                   <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 font-medium">{res.resolverIp}</td>
                   <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-sans text-xs">
-                    <span className="font-medium text-slate-800 dark:text-slate-200">{res.locationLabel}</span> <span className="text-slate-500 font-normal">({res.continent})</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">{res.locationLabel}</span>{' '}
+                    <span className="text-slate-500 font-normal">
+                      {res.networkType === 'anycast' ? '(Anycast Edge)' : `(${res.continent})`}
+                    </span>
                   </td>
                   <td className="py-3 px-4">
                     <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-sky-100 text-sky-800 border border-sky-300 dark:bg-slate-800 dark:text-sky-400 dark:border-transparent shadow-xs">
@@ -148,7 +151,7 @@ export const ResolverMatrix: React.FC<ResolverMatrixProps> = ({ results }) => {
                     ) : (
                       <span className="inline-flex items-center space-x-1.5 font-bold text-amber-900 bg-amber-100 border border-amber-300 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30 px-2.5 py-1 rounded text-[11px] shadow-xs">
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        <span>STALE</span>
+                        <span>DIFFERENT</span>
                       </span>
                     )}
                   </td>

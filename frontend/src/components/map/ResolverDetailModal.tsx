@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Server, Globe, Clock, CheckCircle2, AlertTriangle, XCircle, ShieldAlert } from 'lucide-react';
+import { X, Server, Globe, Clock, CheckCircle2, AlertTriangle, XCircle, ShieldAlert, Cpu, Activity } from 'lucide-react';
 import { ResolverQueryResult } from '@dnscheck/shared';
 
 interface ResolverDetailModalProps {
@@ -16,7 +16,15 @@ export const ResolverDetailModal: React.FC<ResolverDetailModalProps> = ({
   if (!result) return null;
 
   const isMatch = result.matchesCanonical;
-  const isFailed = result.status === 'TIMEOUT' || result.status === 'SERVFAIL' || result.status === 'ERROR';
+  const isFailed = result.status === 'TIMEOUT' || result.status === 'SERVFAIL' || result.status === 'ERROR' || result.status === 'REFUSED';
+
+  // Format active flags
+  const activeFlags = result.flags
+    ? Object.entries(result.flags)
+        .filter(([_, v]) => Boolean(v))
+        .map(([k]) => k.toUpperCase())
+        .join(', ')
+    : 'None';
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -43,17 +51,37 @@ export const ResolverDetailModal: React.FC<ResolverDetailModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-4 text-xs">
+        <div className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
           {/* Location & Metadata */}
           <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
             <div>
-              <p className="text-slate-500 dark:text-slate-400">Vantage Location</p>
-              <p className="text-slate-900 dark:text-slate-100 font-medium mt-0.5">{result.locationLabel}</p>
+              <p className="text-slate-500 dark:text-slate-400">Vantage Type</p>
+              <p className="text-slate-900 dark:text-slate-100 font-medium mt-0.5">
+                {result.networkType === 'anycast' ? 'Global / Anycast Resolver' : result.locationLabel}
+              </p>
             </div>
             <div>
-              <p className="text-slate-500 dark:text-slate-400">Continent / Country</p>
+              <p className="text-slate-500 dark:text-slate-400">Vantage Location</p>
               <p className="text-slate-900 dark:text-slate-100 font-medium mt-0.5">
-                {result.continent} • {result.country}
+                {result.locationLabel}
+              </p>
+            </div>
+            <div>
+              <p className="text-slate-500 dark:text-slate-400">Protocol & Transport</p>
+              <p className="text-slate-900 dark:text-slate-100 font-mono font-medium mt-0.5">
+                {result.transport || 'UDP'} {result.transport === 'DOH' ? '(RFC 8484)' : '(RFC 1035 Port 53)'}
+              </p>
+            </div>
+            <div>
+              <p className="text-slate-500 dark:text-slate-400">DNS RCODE</p>
+              <p className="text-slate-900 dark:text-slate-100 font-mono font-bold mt-0.5">
+                {result.rcode || 'NOERROR'}
+              </p>
+            </div>
+            <div>
+              <p className="text-slate-500 dark:text-slate-400">DNS Flags</p>
+              <p className="text-slate-900 dark:text-slate-100 font-mono font-medium mt-0.5">
+                {activeFlags}
               </p>
             </div>
             <div>
@@ -63,6 +91,18 @@ export const ResolverDetailModal: React.FC<ResolverDetailModalProps> = ({
             <div>
               <p className="text-slate-500 dark:text-slate-400">TTL Reported</p>
               <p className="text-slate-900 dark:text-slate-100 font-mono font-medium mt-0.5">{result.ttl ? `${result.ttl}s` : 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-slate-500 dark:text-slate-400">Evidence Tag</p>
+              <p className="text-slate-900 dark:text-slate-100 font-medium mt-0.5">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  result.evidenceTag === 'DEMO_DATA'
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400'
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400'
+                }`}>
+                  {result.evidenceTag === 'DEMO_DATA' ? 'DEMO DATA / SIMULATED' : 'LIVE QUERY'}
+                </span>
+              </p>
             </div>
           </div>
 
@@ -85,24 +125,24 @@ export const ResolverDetailModal: React.FC<ResolverDetailModalProps> = ({
             )}
             <div>
               <p className="font-semibold text-sm">
-                {isMatch ? 'Status: MATCH (CONVERGED)' : isFailed ? `Status: ${result.status}` : 'Status: MISMATCH (STALE)'}
+                {isMatch ? 'Status: MATCH (CONVERGED)' : isFailed ? `Status: ${result.status}` : 'Status: DIFFERENT RESPONSE'}
               </p>
               <p className="text-[11px] mt-0.5 text-slate-600 dark:text-slate-300">
                 {isMatch
-                  ? 'This vantage point resolver returns the exact canonical authoritative DNS answer.'
+                  ? 'This vantage point resolver returns an answer set matching the canonical authoritative record.'
                   : isFailed
-                  ? `Resolver failed to reply within timeout: ${result.error || 'Server failure'}`
-                  : 'Resolver returns a stale or conflicting answer that does not match the authoritative record.'}
+                  ? `Resolver failed to reply within timeout: ${result.error || 'Query failure'}`
+                  : 'Resolver returned a distinct response from the authoritative reference. This can represent Anycast/GeoDNS routing or caching within the authoritative TTL window.'}
               </p>
             </div>
           </div>
 
-          {/* Comparison Table */}
+          {/* Side-by-Side Comparison Table */}
           <div className="space-y-2">
             <div>
               <p className="text-slate-600 dark:text-slate-400 font-medium mb-1">Expected Authoritative Value</p>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-mono text-emerald-700 dark:bg-slate-950 dark:border-slate-800 dark:text-emerald-400 break-all">
-                {canonicalAnswer.length > 0 ? canonicalAnswer.join(', ') : '(Empty / None)'}
+                {canonicalAnswer.length > 0 ? canonicalAnswer.join(', ') : '(Empty / Authoritative Reference Unavailable)'}
               </div>
             </div>
 
@@ -121,7 +161,7 @@ export const ResolverDetailModal: React.FC<ResolverDetailModalProps> = ({
           </div>
 
           <div className="pt-2 text-[11px] text-slate-500 dark:text-slate-400 text-right">
-            Vantage query logged at: {new Date(result.checkedAt).toLocaleTimeString()}
+            Vantage query logged at: {new Date(result.checkedAt).toISOString()}
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, Shield, Globe, Server, CheckCircle2, AlertTriangle, Terminal } from 'lucide-react';
+import { HowDnsWorksSection } from '../components/docs/HowDnsWorksSection.js';
 
 export const DocumentationPage: React.FC = () => {
   return (
@@ -69,6 +70,9 @@ export const DocumentationPage: React.FC = () => {
           </li>
         </ol>
       </div>
+
+      {/* MAJOR INTERACTIVE SECTION: HOW DNS ACTUALLY WORKS */}
+      <HowDnsWorksSection />
 
       {/* Record Validation Standards */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 transition-colors">

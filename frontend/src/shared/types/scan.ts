@@ -20,6 +20,8 @@ export interface RecordPropagationSummary {
   propagationPercentage: number;
   availabilityPercentage: number;
   averageLatencyMs: number;
+  isComparable?: boolean;
+  statusMessage?: string;
 }
 
 export interface ScanResult {
