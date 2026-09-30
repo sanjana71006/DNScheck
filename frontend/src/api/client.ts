@@ -8,10 +8,20 @@ import {
 } from '@dnscheck/shared';
 
 const getApiBase = (): string => {
-  const envUrl = (import.meta as any)?.env?.VITE_API_URL;
-  if (!envUrl || typeof envUrl !== 'string') return '/api';
-  const clean = envUrl.trim().replace(/\/+$/, '');
-  return clean.endsWith('/api') ? clean : `${clean}/api`;
+  // 1. Literal import.meta.env pattern for Vite compile-time replacement
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    const clean = envUrl.trim().replace(/\/+$/, '');
+    return clean.endsWith('/api') ? clean : `${clean}/api`;
+  }
+
+  // 2. Automatic production fallback when running on Render
+  if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+    return 'https://dnscheck-backend.onrender.com/api';
+  }
+
+  // 3. Local development fallback (Vite proxy)
+  return '/api';
 };
 
 const API_BASE = getApiBase();
