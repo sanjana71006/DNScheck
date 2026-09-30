@@ -202,5 +202,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ force })
     });
+  },
+
+  async quickLookup(query: string): Promise<{
+    query: string;
+    domain: string;
+    matchedKeyword: boolean;
+    ipv4: string[];
+    ipv6: string[];
+    cnames: string[];
+    ptrRecords: Record<string, string[]>;
+    totalIps: number;
+    responseTimeMs: number;
+    resolvedAt: string;
+  }> {
+    return request<any>(`/quick-lookup?q=${encodeURIComponent(query)}`);
   }
 };

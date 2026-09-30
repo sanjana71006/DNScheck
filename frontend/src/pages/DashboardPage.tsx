@@ -8,6 +8,7 @@ import { LatencyChart } from '../components/charts/LatencyChart.js';
 import { SecurityScorecardView } from '../components/security/SecurityScorecardView.js';
 import { FindingsList } from '../components/findings/FindingsList.js';
 import { RecordTable } from '../components/scan/RecordTable.js';
+import { QuickIpLookup } from '../components/lookup/QuickIpLookup.js';
 import { ScanResult, ScanStage, DNSRecordType } from '@dnscheck/shared';
 import { Layers } from 'lucide-react';
 
@@ -119,6 +120,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <FindingsList findings={currentScan.findings} />
         </div>
       )}
+
+      {/* Website to IP Resolver & Quick Intelligence Lookup (At the very bottom of the Dashboard) */}
+      <QuickIpLookup
+        onScanDomain={(domain) => {
+          onScan(domain, ['A', 'AAAA', 'MX', 'TXT', 'NS']);
+        }}
+      />
     </div>
   );
 };

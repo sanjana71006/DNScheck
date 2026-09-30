@@ -8,6 +8,9 @@ const router = Router();
 // Streaming scan execution via Server-Sent Events (SSE)
 router.get('/scans/stream', perDomainCooldown, ScanController.streamScan);
 
+// Quick Domain & Keyword to IP Lookup
+router.get('/quick-lookup', ScanController.quickLookup);
+
 // Standard scan execution
 router.post('/scans', scanRateLimiter, perDomainCooldown, validateRequest(CreateScanSchema), ScanController.startScan);
 

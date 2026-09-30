@@ -390,4 +390,160 @@ export class ScanController {
       next(err);
     }
   }
+
+  // Quick Domain & Keyword to IP Resolution Intelligence
+  public static async quickLookup(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Date.now();
+    try {
+      const q = ((req.query.q as string) || (req.query.domain as string) || '').trim();
+      if (!q) {
+        res.status(400).json({ success: false, error: { message: 'Query parameter q or domain is required' } });
+        return;
+      }
+
+      // Keyword to domain mapping dictionary for popular services
+      const KEYWORD_MAP: Record<string, string> = {
+        google: 'google.com',
+        youtube: 'youtube.com',
+        gmail: 'gmail.com',
+        github: 'github.com',
+        apple: 'apple.com',
+        microsoft: 'microsoft.com',
+        amazon: 'amazon.com',
+        aws: 'aws.amazon.com',
+        netflix: 'netflix.com',
+        openai: 'openai.com',
+        chatgpt: 'chatgpt.com',
+        facebook: 'facebook.com',
+        instagram: 'instagram.com',
+        meta: 'meta.com',
+        twitter: 'x.com',
+        x: 'x.com',
+        reddit: 'reddit.com',
+        wikipedia: 'wikipedia.org',
+        cloudflare: 'cloudflare.com',
+        linkedin: 'linkedin.com',
+        spotify: 'spotify.com',
+        render: 'render.com',
+        vercel: 'vercel.com',
+        yahoo: 'yahoo.com',
+        bing: 'bing.com',
+        duckduckgo: 'duckduckgo.com',
+        twitch: 'twitch.tv',
+        zoom: 'zoom.us',
+        slack: 'slack.com',
+        discord: 'discord.com',
+        whatsapp: 'whatsapp.com',
+        telegram: 'telegram.org',
+        tiktok: 'tiktok.com',
+        pinterest: 'pinterest.com',
+        adobe: 'adobe.com',
+        salesforce: 'salesforce.com',
+        oracle: 'oracle.com',
+        ibm: 'ibm.com',
+        intel: 'intel.com',
+        nvidia: 'nvidia.com',
+        stripe: 'stripe.com',
+        paypal: 'paypal.com'
+      };
+
+      // Clean query: strip protocol, slashes, ports
+      const clean = q
+        .toLowerCase()
+        .replace(/^(https?:\/\/)?(www\.)?/, '')
+        .split('/')[0]
+        .split(':')[0]
+        .trim();
+
+      let domain = clean;
+      let matchedKeyword = false;
+
+      if (!clean.includes('.')) {
+        if (KEYWORD_MAP[clean]) {
+          domain = KEYWORD_MAP[clean];
+          matchedKeyword = true;
+        } else {
+          domain = `${clean}.com`;
+        }
+      }
+
+      const dns = await import('dns');
+      const resolver = new dns.promises.Resolver();
+      resolver.setServers(['8.8.8.8', '1.1.1.1', '9.9.9.9']);
+
+      let ipv4: string[] = [];
+      let ipv6: string[] = [];
+      let cnames: string[] = [];
+      const ptrMap: Record<string, string[]> = {};
+
+      // 1. Resolve A (IPv4)
+      try {
+        ipv4 = await resolver.resolve4(domain);
+      } catch (e) {
+        // Fallback: if keyword without dot failed, try .org or .io
+        if (!clean.includes('.') && !matchedKeyword) {
+          try {
+            domain = `${clean}.org`;
+            ipv4 = await resolver.resolve4(domain);
+          } catch (e2) {
+            try {
+              domain = `${clean}.io`;
+              ipv4 = await resolver.resolve4(domain);
+            } catch (e3) {
+              // no A records found
+            }
+          }
+        }
+      }
+
+      // 2. Resolve AAAA (IPv6)
+      try {
+        ipv6 = await resolver.resolve6(domain);
+      } catch (e) {
+        // optional IPv6
+      }
+
+      // 3. Resolve CNAME
+      try {
+        cnames = await resolver.resolveCname(domain);
+      } catch (e) {
+        // optional CNAME
+      }
+
+      // 4. Reverse DNS (PTR) for discovered IPs (limit to first 4)
+      const ipsToReverse = [...ipv4.slice(0, 3), ...ipv6.slice(0, 1)];
+      await Promise.allSettled(
+        ipsToReverse.map(async (ip) => {
+          try {
+            const hostnames = await resolver.reverse(ip);
+            if (hostnames && hostnames.length > 0) {
+              ptrMap[ip] = hostnames;
+            }
+          } catch (e) {
+            // PTR not configured
+          }
+        })
+      );
+
+      const responseTimeMs = Date.now() - startTime;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          query: q,
+          domain,
+          matchedKeyword,
+          ipv4,
+          ipv6,
+          cnames,
+          ptrRecords: ptrMap,
+          totalIps: ipv4.length + ipv6.length,
+          responseTimeMs,
+          resolvedAt: new Date().toISOString()
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
